@@ -10,8 +10,10 @@ export interface SvgSafetyIssue {
   message: string;
 }
 
-const EVENT_HANDLER_ATTR = /\son[a-z]+\s*=/i;
-const EXTERNAL_REF_ATTR = /\s(?:href|xlink:href|src)\s*=\s*["'](?!#)(https?:|\/\/|data:text\/html)/i;
+// Scoped to inside a tag: rendered text content is escaped (no raw "<"), so a
+// description that merely reads "onclick=" is not an attribute.
+const EVENT_HANDLER_ATTR = /<[^>]*\son[a-z]+\s*=/i;
+const EXTERNAL_REF_ATTR = /<[^>]*\s(?:href|xlink:href|src)\s*=\s*["'](?!#)(https?:|\/\/|data:text\/html)/i;
 const UNRESOLVED_TOKEN = /\{\{[^}]*\}\}|undefined|\[object Object\]/;
 
 export function checkSvgSafety(markup: string): SvgSafetyIssue[] {

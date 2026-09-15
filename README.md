@@ -18,7 +18,9 @@ project-specific styling are intentionally out of scope here.
 | `src/lib/graphemes.ts` | Grapheme-cluster-aware string helpers (`Intl.Segmenter`-based) |
 | `src/lib/document.ts` | Document construction and structural validation (item ranges, note references) |
 | `src/lib/warnings.ts` | Non-blocking content checks (empty fields, duplicate headings, unreferenced notes, layout balance, ...) |
-| `src/lib/layout/` | The pure-function SVG layout engine: label placement, leader-line routing, wrapping, and geometric collision/crossing checks |
+| `src/lib/layout/` | The pure-function SVG layout engine: label placement, leader-line routing, wrapping (with Japanese line-break rules), note numbering in reading order, geometric collision/crossing checks, canvas-based text measurement, and an on-demand left/right re-arrangement search |
+| `src/lib/noteTokens.ts` | Inline note references inside option descriptions (`{{note:ID}}`): parsing, migration from the older end-of-text form, and cleanup when a note is deleted |
+| `src/lib/summary.ts` | A plain-text summary of a diagram (for alt text or spec drafts) |
 | `src/components/DiagramSvg.tsx` | The SVG renderer (React component, safe by construction — no script/foreignObject/external refs) |
 | `src/lib/svg-safety.ts` | A static scan that rejects unsafe SVG output before it's ever offered for download |
 | `src/lib/export/pngExport.ts` | Canvas-based SVG→PNG rasterization |

@@ -77,7 +77,7 @@
       "required": ["code", "description", "noteRefs"],
       "properties": {
         "code": { "type": "string", "maxLength": 500 },
-        "description": { "type": "string", "maxLength": 500 },
+        "description": { "type": "string", "maxLength": 500, "description": "Text shown after the option code. A note reference {{note:<note id>}} marks where that note's superscript number is drawn; noteRefs lists the same ids in order of first appearance." },
         "noteRefs": {
           "type": "array",
           "items": { "type": "string" }

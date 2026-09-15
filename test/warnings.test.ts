@@ -19,13 +19,13 @@ describe("checkWarnings", () => {
         return i;
       })(),
     ];
-    const layout = computeLayout("ABX-120-RN", items, 1600);
+    const layout = computeLayout("ABX-120-RN", items, 2400);
     expect(checkWarnings("ABX-120-RN", items, layout)).toEqual([]);
   });
 
   it("flags an empty heading", () => {
     const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
-    const layout = computeLayout("A", [item], 1600);
+    const layout = computeLayout("A", [item], 2400);
     const warnings = checkWarnings("A", [item], layout);
     expect(warnings.some((w) => w.code === "empty-heading" && w.itemId === item.id)).toBe(true);
   });
@@ -34,7 +34,7 @@ describe("checkWarnings", () => {
     const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
     item.heading = "h";
     item.options = [{ code: "", description: "", noteRefs: [] }];
-    const layout = computeLayout("A", [item], 1600);
+    const layout = computeLayout("A", [item], 2400);
     const warnings = checkWarnings("A", [item], layout);
     expect(warnings.some((w) => w.code === "empty-option-code")).toBe(true);
     expect(warnings.some((w) => w.code === "empty-option-description")).toBe(true);
@@ -45,7 +45,7 @@ describe("checkWarnings", () => {
     a.heading = "サイズ";
     const b = createEmptyItem({ start: 2, end: 3, unit: "grapheme" });
     b.heading = "サイズ";
-    const layout = computeLayout("ABCD", [a, b], 1600);
+    const layout = computeLayout("ABCD", [a, b], 2400);
     const warnings = checkWarnings("ABCD", [a, b], layout);
     expect(warnings.some((w) => w.code === "duplicate-heading")).toBe(true);
   });
@@ -53,19 +53,19 @@ describe("checkWarnings", () => {
   it("does not flag two different empty-string headings as duplicates of each other", () => {
     const a = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
     const b = createEmptyItem({ start: 2, end: 3, unit: "grapheme" });
-    const layout = computeLayout("ABCD", [a, b], 1600);
+    const layout = computeLayout("ABCD", [a, b], 2400);
     const warnings = checkWarnings("ABCD", [a, b], layout);
     expect(warnings.some((w) => w.code === "duplicate-heading")).toBe(false);
   });
 
   it("flags full-width alphanumeric characters in the code", () => {
-    const layout = computeLayout("ＡＢＸ-120-RN", [], 1600);
+    const layout = computeLayout("ＡＢＸ-120-RN", [], 2400);
     const warnings = checkWarnings("ＡＢＸ-120-RN", [], layout);
     expect(warnings.some((w) => w.code === "fullwidth-alnum")).toBe(true);
   });
 
   it("does not flag an all-ASCII code", () => {
-    const layout = computeLayout("ABX-120-RN", [], 1600);
+    const layout = computeLayout("ABX-120-RN", [], 2400);
     const warnings = checkWarnings("ABX-120-RN", [], layout);
     expect(warnings.some((w) => w.code === "fullwidth-alnum")).toBe(false);
   });
@@ -74,7 +74,7 @@ describe("checkWarnings", () => {
     const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
     item.heading = "とても長い見出しテキストで折り返しが複数行になることを狙っています";
     item.options = [{ code: "X", description: "さらに長い説明文をここに追加して折返し行数を増やすためのテスト文字列です", noteRefs: [] }];
-    const layout = computeLayout("A", [item], 1600);
+    const layout = computeLayout("A", [item], 480);
     const warnings = checkWarnings("A", [item], layout);
     expect(warnings.some((w) => w.code === "heavy-wrap" && w.itemId === item.id)).toBe(true);
   });
@@ -85,7 +85,7 @@ describe("checkWarnings", () => {
       item.heading = `h${i}`;
       return item;
     });
-    const layout = computeLayout("ABCDEFGHIJ", items, 1600);
+    const layout = computeLayout("ABCDEFGHIJ", items, 2400);
     const warnings = checkWarnings("ABCDEFGHIJ", items, layout);
     expect(warnings.some((w) => w.code === "one-sided")).toBe(true);
   });
@@ -96,8 +96,54 @@ describe("checkWarnings", () => {
       item.heading = `h${i}`;
       return item;
     });
-    const layout = computeLayout("ABCDEFGHIJ", items, 1600);
+    const layout = computeLayout("ABCDEFGHIJ", items, 2400);
     const warnings = checkWarnings("ABCDEFGHIJ", items, layout);
     expect(warnings.some((w) => w.code === "one-sided")).toBe(false);
+  });
+
+  it("flags an item whose column is narrower than its shortest unbreakable content", () => {
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" }, "left");
+    item.heading = "h";
+    item.options = [{ code: "X", description: "Supercalifragilisticexpialidocious-unbreakable-token", noteRefs: [] }];
+    const layout = computeLayout("AB", [item], 600);
+    const warnings = checkWarnings("AB", [item], layout);
+    expect(warnings.some((w) => w.code === "width-shortfall" && w.itemId === item.id)).toBe(true);
+  });
+});
+
+describe("checkWarnings: kinds and part-number characters", () => {
+  it("marks unwritten fields as todo and style issues as notice", () => {
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
+    const layout = computeLayout("ＡB", [item], 2400);
+    const warnings = checkWarnings("ＡB", [item], layout);
+    expect(warnings.find((w) => w.code === "empty-heading")?.kind).toBe("todo");
+    expect(warnings.find((w) => w.code === "fullwidth-alnum")?.kind).toBe("notice");
+  });
+
+  it("warns about characters the Latin-only part-number fonts lack, without doubling up on full-width alphanumerics", () => {
+    const only = (code: string) => checkWarnings(code, [], computeLayout(code, [], 2400)).map((w) => w.code);
+    expect(only("ＡＢ-12")).toEqual(["fullwidth-alnum"]);
+    expect(only("AB-型式")).toEqual(["non-ascii-code"]);
+    expect(only("AB-12 /x")).toEqual([]);
+  });
+});
+
+describe("checkWarnings: empty note text", () => {
+  it("lists a note with no text as something not yet written, using its drawing number", () => {
+    const note = { id: "n1", text: "  " };
+    const layout = computeLayout("AB", [], 2400, [note]);
+    const warning = checkWarnings("AB", [], layout, [note]).find((w) => w.code === "empty-note-text");
+    expect(warning).toMatchObject({ kind: "todo", message: "注記1の本文が空です" });
+  });
+});
+
+describe("checkWarnings: references written in the text", () => {
+  it("does not call a note unreferenced when the text refers to it but noteRefs lags behind", () => {
+    const note = { id: "n", text: "注記本文" };
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
+    item.heading = "h";
+    item.options = [{ code: "X", description: "説明{{note:n}}", noteRefs: [] }];
+    const layout = computeLayout("AB", [item], 2400, [note]);
+    expect(checkWarnings("AB", [item], layout, [note]).some((w) => w.code === "unreferenced-note")).toBe(false);
   });
 });

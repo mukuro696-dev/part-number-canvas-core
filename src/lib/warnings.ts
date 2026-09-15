@@ -1,32 +1,37 @@
 import type { PartNumberItem, PartNumberNote } from "./schema/types";
-import type { DiagramLayout } from "./layout/computeLayout";
+import { LAYOUT, type DiagramLayout } from "./layout/computeLayout";
+import { noteRefsIn, plainDescription } from "./noteTokens";
 
 export interface Warning {
   code:
     | "empty-heading"
     | "empty-option-code"
     | "empty-option-description"
+    | "empty-note-text"
     | "duplicate-heading"
     | "fullwidth-alnum"
+    | "non-ascii-code"
     | "heavy-wrap"
     | "one-sided"
-    | "unreferenced-note";
+    | "unreferenced-note"
+    | "width-shortfall";
+  /** todo = not written yet (expected while drafting); notice = written but worth a look */
+  kind: "todo" | "notice";
   itemId?: string;
   message: string;
 }
 
 const FULLWIDTH_ALNUM = /[０-９Ａ-Ｚａ-ｚ]/;
-/** heading + body lines combined; above this a label is "wrapping a lot" */
-const HEAVY_WRAP_LINE_THRESHOLD = 4;
+/** outside printable ASCII and not already covered by the full-width alphanumeric warning */
+const NON_ASCII_OTHER = /[^\x20-\x7e０-９Ａ-Ｚａ-ｚ]/;
 /** only flag a one-sided layout once there are enough items for it to mean something */
 const ONE_SIDED_MIN_ITEMS = 4;
 
 /**
  * The Phase 1 requirements' "保存を止めない警告" (non-blocking warnings):
  * 見出し・説明・コード値が空／似た項目が重複する／型番に全角英数字が
- * 含まれる／折返しが多い／片側へ項目が偏っている。
- * ("未参照注記がある" is not included here — it needs the notes feature,
- * which doesn't exist yet.)
+ * 含まれる／折返しが多い／片側へ項目が偏っている／未参照の注記がある／
+ * 項目の幅が足りない。
  */
 export function checkWarnings(
   code: string,
@@ -39,14 +44,15 @@ export function checkWarnings(
   for (const item of items) {
     const label = item.heading || item.id;
     if (!item.heading.trim()) {
-      warnings.push({ code: "empty-heading", itemId: item.id, message: `項目「${label}」の見出しが空です` });
+      warnings.push({ code: "empty-heading", kind: "todo", itemId: item.id, message: `項目「${label}」の見出しが空です` });
     }
     for (const option of item.options) {
       if (!option.code.trim()) {
-        warnings.push({ code: "empty-option-code", itemId: item.id, message: `項目「${label}」に型番中の表記が未入力の選択肢があります` });
+        warnings.push({ code: "empty-option-code", kind: "todo", itemId: item.id, message: `項目「${label}」に型番中の表記が未入力の選択肢があります` });
       }
-      if (!option.description.trim()) {
-        warnings.push({ code: "empty-option-description", itemId: item.id, message: `項目「${label}」に説明が未入力の選択肢があります` });
+      // a description holding only note references still has nothing written in it
+      if (!plainDescription(option.description).trim()) {
+        warnings.push({ code: "empty-option-description", kind: "todo", itemId: item.id, message: `項目「${label}」に説明が未入力の選択肢があります` });
       }
     }
   }
@@ -61,32 +67,61 @@ export function checkWarnings(
   }
   for (const [heading, ids] of headingGroups) {
     if (ids.length > 1) {
-      warnings.push({ code: "duplicate-heading", message: `見出し「${heading}」が${ids.length}件の項目で重複しています` });
+      warnings.push({ code: "duplicate-heading", kind: "notice", message: `見出し「${heading}」が${ids.length}件の項目で重複しています` });
     }
   }
 
   if (FULLWIDTH_ALNUM.test(code)) {
-    warnings.push({ code: "fullwidth-alnum", message: "型番に全角英数字が含まれています" });
+    warnings.push({ code: "fullwidth-alnum", kind: "notice", message: "型番に全角英数字が含まれています" });
+  }
+  // the part-number fonts are Latin-only, so anything else may fall back to another typeface
+  if (NON_ASCII_OTHER.test(code)) {
+    warnings.push({
+      code: "non-ascii-code",
+      kind: "notice",
+      message: "型番に英数字・記号以外の文字が含まれています。型番行の書体に字が無く、別の書体で表示される可能性があります",
+    });
   }
 
   for (const placed of layout.placed) {
-    const totalLines = placed.label.headingLines.length + placed.label.bodyLines.length;
-    if (totalLines > HEAVY_WRAP_LINE_THRESHOLD) {
-      const label = placed.item.heading || placed.item.id;
-      warnings.push({ code: "heavy-wrap", itemId: placed.item.id, message: `項目「${label}」の折返しが多くなっています` });
+    const label = placed.item.heading || placed.item.id;
+    if (placed.label.options.some((o) => o.descLines.length > LAYOUT.maxWrapLines)) {
+      warnings.push({
+        code: "heavy-wrap",
+        kind: "notice",
+        itemId: placed.item.id,
+        message: `項目「${label}」の説明が${LAYOUT.maxWrapLines}行を超えて折り返しています`,
+      });
     }
+  }
+
+  for (const s of layout.shortfalls) {
+    const item = items.find((i) => i.id === s.itemId);
+    warnings.push({
+      code: "width-shortfall",
+      kind: "notice",
+      itemId: s.itemId,
+      message: `項目「${item?.heading || s.itemId}」の幅が足りません（使える幅 ${s.available} に対し ${s.required} 必要）。説明を短くするか、左右の配置を変えてください`,
+    });
   }
 
   const leftCount = layout.placed.filter((p) => p.band === "left").length;
   const rightCount = layout.placed.filter((p) => p.band === "right").length;
   if (leftCount + rightCount >= ONE_SIDED_MIN_ITEMS && (leftCount === 0 || rightCount === 0)) {
-    warnings.push({ code: "one-sided", message: "項目が片側に偏っています" });
+    warnings.push({ code: "one-sided", kind: "notice", message: "項目が片側に偏っています" });
   }
 
-  const referencedNoteIds = new Set(items.flatMap((item) => item.options.flatMap((opt) => opt.noteRefs)));
+  notes.forEach((note) => {
+    if (!note.text.trim()) {
+      const number = layout.noteNumbers.get(note.id);
+      warnings.push({ code: "empty-note-text", kind: "todo", message: `注記${number ?? ""}の本文が空です` });
+    }
+  });
+
+  const referencedNoteIds = new Set(items.flatMap((item) => item.options.flatMap((opt) => [...opt.noteRefs, ...noteRefsIn(opt.description)])));
   for (const note of notes) {
     if (!referencedNoteIds.has(note.id)) {
-      warnings.push({ code: "unreferenced-note", message: `注記「${note.text || note.id}」がどの項目からも参照されていません` });
+      warnings.push({ code: "unreferenced-note", kind: "notice", message: `注記「${note.text || note.id}」がどの項目からも参照されていません` });
     }
   }
 

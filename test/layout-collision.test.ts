@@ -12,9 +12,14 @@ function fakeLayout(placed: PlacedItemLayout[], overrides: Partial<DiagramLayout
     codeRowY: 200,
     graphemes: ["A", "B", "C"],
     charX: (i) => 60 + i * 38,
+    codeX: 60,
     placed,
     footnotes: [],
+    footnoteX: 60,
     footnotesRuleY: null,
+    footnotesRuleEndX: 1540,
+    noteNumbers: new Map(),
+    shortfalls: [],
     ...overrides,
   };
 }
@@ -24,12 +29,14 @@ function placedAt(id: string, points: Point[], bbox = { x: 0, y: 0, width: 10, h
   const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
   item.id = id;
   const first = points[0];
+  const last = points[points.length - 1];
   return {
     item,
     band: "left",
     underline: { a: first, b: first },
     leader: { points },
-    label: { anchor: "start", x: bbox.x, headingLines: ["h"], bodyLines: [], bbox },
+    rule: { a: last, b: last },
+    label: { x: bbox.x, headingText: "h", headingY: bbox.y, codeColumnWidth: 0, options: [], bbox },
   };
 }
 
@@ -40,7 +47,7 @@ describe("computeLayout column assignment ('auto' side)", () => {
     const right = createEmptyItem({ start: 8, end: 10, unit: "grapheme" }, "auto");
     right.heading = "right-ish";
 
-    const layout = computeLayout("ABCDEFGHIJ", [left, right], 1600);
+    const layout = computeLayout("ABCDEFGHIJ", [left, right], 2400);
     const bandOf = (id: string) => layout.placed.find((p) => p.item.id === id)?.band;
     expect(bandOf(left.id)).toBe("left");
     expect(bandOf(right.id)).toBe("right");
@@ -49,7 +56,7 @@ describe("computeLayout column assignment ('auto' side)", () => {
   it("places every item's label below the code row", () => {
     const item = createEmptyItem({ start: 0, end: 2, unit: "grapheme" }, "auto");
     item.heading = "test";
-    const layout = computeLayout("ABCDEFGHIJ", [item], 1600);
+    const layout = computeLayout("ABCDEFGHIJ", [item], 2400);
     const placed = layout.placed[0];
     expect(placed.label.bbox.y).toBeGreaterThan(layout.codeRowY);
     expect(placed.underline.a.y).toBeGreaterThan(layout.codeRowY);
@@ -68,15 +75,11 @@ describe("computeLayout column assignment ('auto' side)", () => {
       item.heading = `h${start}`;
       return item;
     });
-    const layout = computeLayout("ABCDEFGHIJKLMNOPQRST", items, 1600);
+    const layout = computeLayout("ABCDEFGHIJKLMNOPQRST", items, 2400);
     expect(checkLayoutIssues(layout).filter((i) => i.code === "leader-crossing")).toEqual([]);
   });
 
-  it("flags a crossing when an early (shallow) item's label is wide enough to reach past a later item's own digit position", () => {
-    // This is the layout tool's known, accepted limit (mirrors the
-    // reference tool's own "作業者が手で直す" philosophy): the shared
-    // left margin can't always keep every pair non-crossing when label
-    // widths are independent of the gaps between digit positions.
+  it("shifts the code row right so deeper left leaders clear the labels above them", () => {
     const items = [
       [0, 2],
       [2, 4],
@@ -87,8 +90,15 @@ describe("computeLayout column assignment ('auto' side)", () => {
       item.options = [{ code: `c${start}`, description: `option ${start}`, noteRefs: [] }];
       return item;
     });
-    const layout = computeLayout("ABCDEFGHIJKLMNOPQRST", items, 1600);
-    expect(checkLayoutIssues(layout).some((i) => i.code === "leader-crossing")).toBe(true);
+    const layout = computeLayout("ABCDEFGHIJKLMNOPQRST", items, 2400);
+    expect(layout.placed.every((p) => p.band === "left")).toBe(true);
+    expect(checkLayoutIssues(layout)).toEqual([]);
+    // every deeper left item's vertical leader sits right of the shallower labels' right edges
+    const byDepth = [...layout.placed].sort((a, b) => a.label.bbox.y - b.label.bbox.y);
+    for (let i = 1; i < byDepth.length; i++) {
+      const dropX = byDepth[i].leader.points[0].x;
+      for (const above of byDepth.slice(0, i)) expect(dropX).toBeGreaterThan(above.label.bbox.x + above.label.bbox.width);
+    }
   });
 });
 
@@ -110,7 +120,7 @@ describe("checkLayoutIssues", () => {
           return i;
         })(),
       ],
-      1600,
+      2400,
     );
     expect(checkLayoutIssues(layout)).toEqual([]);
   });
@@ -170,5 +180,44 @@ describe("checkLayoutIssues", () => {
     const layout = fakeLayout([outOfBounds]);
     const issues = checkLayoutIssues(layout);
     expect(issues.some((i) => i.code === "out-of-bounds" && i.itemIds.includes("item-oob"))).toBe(true);
+  });
+});
+
+describe("checkLayoutIssues: cases found in review", () => {
+  it("flags a left label too wide for its column that runs over its own leader", () => {
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" }, "left");
+    item.heading = "W".repeat(40);
+    const layout = computeLayout("AB", [item], 600);
+    const issues = checkLayoutIssues(layout);
+    expect(issues.some((i) => i.code === "leader-pierces-label" && i.itemIds.length === 1 && i.itemIds[0] === item.id)).toBe(true);
+  });
+
+  it("does not flag an ordinary label against its own leader", () => {
+    const left = createEmptyItem({ start: 0, end: 2, unit: "grapheme" }, "left");
+    left.heading = "シリーズ";
+    const right = createEmptyItem({ start: 3, end: 5, unit: "grapheme" }, "right");
+    right.heading = "本体色";
+    const layout = computeLayout("ZQ-BK", [left, right], 2400);
+    expect(checkLayoutIssues(layout)).toEqual([]);
+  });
+
+  it("flags two items whose vertical leaders coincide (same range drawn to both sides)", () => {
+    const a = createEmptyItem({ start: 1, end: 3, unit: "grapheme" }, "left");
+    a.heading = "L";
+    const b = createEmptyItem({ start: 1, end: 3, unit: "grapheme" }, "right");
+    b.heading = "R";
+    const layout = computeLayout("ABCD", [a, b], 2400);
+    expect(checkLayoutIssues(layout).some((i) => i.code === "leader-crossing")).toBe(true);
+  });
+});
+
+describe("computeLayout: blank-only text", () => {
+  it("treats a blank heading and blank option code as empty, matching the warnings", () => {
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
+    item.heading = "   ";
+    item.options = [{ code: "   ", description: "説明", noteRefs: [] }];
+    const layout = computeLayout("AB", [item], 2400);
+    expect(layout.placed[0].label.headingText).toBe("(見出し未設定)");
+    expect(layout.placed[0].label.options[0].codeText).toBe("");
   });
 });

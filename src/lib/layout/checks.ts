@@ -15,6 +15,10 @@ function leaderSegments(leader: PlacedItemLayout["leader"]): Segment[] {
   return segments;
 }
 
+function lineSegments(p: PlacedItemLayout): Segment[] {
+  return [...leaderSegments(p.leader), { a: p.rule.a, b: p.rule.b }];
+}
+
 function leaderPoints(leader: PlacedItemLayout["leader"]): Point[] {
   return leader.points;
 }
@@ -60,7 +64,7 @@ export function checkLayoutIssues(layout: DiagramLayout): LayoutIssue[] {
     }
   }
 
-  const withItemId = layout.placed.map((p) => ({ itemId: p.item.id, segments: leaderSegments(p.leader) }));
+  const withItemId = layout.placed.map((p) => ({ itemId: p.item.id, segments: lineSegments(p) }));
   for (let i = 0; i < withItemId.length; i++) {
     for (let j = i + 1; j < withItemId.length; j++) {
       for (const segA of withItemId[i].segments) {
@@ -77,7 +81,35 @@ export function checkLayoutIssues(layout: DiagramLayout): LayoutIssue[] {
     }
   }
 
+  // Two vertical leaders on the same x (e.g. the same range drawn to both
+  // sides) read as one line; the endpoint-sharing rule above would let that through.
+  const verticals = layout.placed.map((p) => {
+    const [top, bend] = p.leader.points;
+    return { itemId: p.item.id, x: top.x, vertical: Math.abs(top.x - bend.x) < 1, y0: Math.min(top.y, bend.y), y1: Math.max(top.y, bend.y) };
+  }).filter((v) => v.vertical);
+  for (let i = 0; i < verticals.length; i++) {
+    for (let j = i + 1; j < verticals.length; j++) {
+      const a = verticals[i];
+      const b = verticals[j];
+      if (Math.abs(a.x - b.x) < 1 && Math.min(a.y1, b.y1) > Math.max(a.y0, b.y0)) {
+        issues.push({
+          code: "leader-crossing",
+          itemIds: [a.itemId, b.itemId],
+          message: `leader lines for "${a.itemId}" and "${b.itemId}" overlap`,
+        });
+      }
+    }
+  }
+
   for (const p of layout.placed) {
+    // a label too wide for its column spills over its own vertical leader
+    if (rectIntersectsSegment(p.label.bbox, { a: p.leader.points[0], b: p.leader.points[1] })) {
+      issues.push({
+        code: "leader-pierces-label",
+        itemIds: [p.item.id],
+        message: `leader line for "${p.item.id}" passes through its own label text`,
+      });
+    }
     for (const other of layout.placed) {
       if (other.item.id === p.item.id) continue;
       for (const seg of leaderSegments(p.leader)) {

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { checkSvgSafety } from "../src/lib/svg-safety";
 import { DiagramSvg } from "../src/components/DiagramSvg";
 import { createEmptyItem } from "../src/lib/document";
+import { computeLayout } from "../src/lib/layout/computeLayout";
 
 describe("checkSvgSafety (detector)", () => {
   it("flags a <script> element", () => {
@@ -44,9 +45,8 @@ describe("DiagramSvg rendered output", () => {
 
     const markup = renderToStaticMarkup(
       DiagramSvg({
+        layout: computeLayout("A", [item], 2400),
         code: "A",
-        items: [item],
-        svgWidth: 1600,
         background: "transparent",
         accent: "#2563eb",
       }),
@@ -60,7 +60,7 @@ describe("DiagramSvg rendered output", () => {
 
   it("declares the SVG namespace (required to load the exported file as a standalone image, e.g. for PNG rasterization)", () => {
     const markup = renderToStaticMarkup(
-      DiagramSvg({ code: "ABX-120-RN", items: [], svgWidth: 1600, background: "transparent", accent: "#2563eb" }),
+      DiagramSvg({ layout: computeLayout("ABX-120-RN", [], 2400), code: "ABX-120-RN", background: "transparent", accent: "#2563eb" }),
     );
     expect(markup).toContain('xmlns="http://www.w3.org/2000/svg"');
   });
