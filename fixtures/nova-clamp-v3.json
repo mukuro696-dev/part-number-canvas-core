@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "app": "part-number-canvas",
+  "documentId": "2f6a1e9a-4a55-4b8e-9c0a-1a8f9d2b6e10",
+  "revision": 1,
+  "meta": {
+    "title": "Nova Clamp V3 (fictional sample)",
+    "locale": "en",
+    "createdAt": "2026-09-15T01:00:00Z",
+    "updatedAt": "2026-09-15T01:00:00Z"
+  },
+  "model": {
+    "code": "NCV-03-L-SS",
+    "items": [
+      {
+        "id": "item-line",
+        "range": { "start": 0, "end": 3, "unit": "grapheme" },
+        "heading": "Product line",
+        "side": "left",
+        "options": [
+          { "code": "NCV", "description": "Nova Clamp V-series (fictional)", "noteRefs": [] }
+        ]
+      },
+      {
+        "id": "item-generation",
+        "range": { "start": 4, "end": 6, "unit": "grapheme" },
+        "heading": "Generation",
+        "side": "auto",
+        "options": [
+          { "code": "03", "description": "3rd generation", "noteRefs": [] }
+        ]
+      },
+      {
+        "id": "item-size",
+        "range": { "start": 7, "end": 8, "unit": "grapheme" },
+        "heading": "Size class",
+        "side": "auto",
+        "options": [
+          { "code": "L", "description": "Large", "noteRefs": ["note-fictional"] },
+          { "code": "S", "description": "Small", "noteRefs": ["note-fictional"] }
+        ]
+      },
+      {
+        "id": "item-material",
+        "range": { "start": 9, "end": 11, "unit": "grapheme" },
+        "heading": "Material",
+        "side": "right",
+        "options": [
+          { "code": "SS", "description": "Stainless steel (fictional grade)", "noteRefs": [] }
+        ]
+      }
+    ],
+    "notes": [
+      { "id": "note-fictional", "text": "All dimensions and grades are placeholders for a fictional product line." }
+    ]
+  },
+  "appearance": {
+    "codeFont": "barlowCondensed",
+    "bodyFont": "design",
+    "background": "white",
+    "accent": "#16a34a"
+  },
+  "export": {
+    "svgWidth": 1600,
+    "pngWidth": 2400
+  }
+}

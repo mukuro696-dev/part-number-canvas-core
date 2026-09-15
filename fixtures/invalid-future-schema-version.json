@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 2,
+  "app": "part-number-canvas",
+  "documentId": "00000000-0000-4000-8000-000000000000",
+  "revision": 0,
+  "meta": {
+    "title": "Invalid fixture: schemaVersion from the future",
+    "locale": "en",
+    "createdAt": "2026-09-15T00:00:00Z",
+    "updatedAt": "2026-09-15T00:00:00Z"
+  },
+  "model": {
+    "code": "X",
+    "items": [],
+    "notes": []
+  },
+  "appearance": {
+    "codeFont": "robotoCondensed",
+    "bodyFont": "gothic",
+    "background": "transparent",
+    "accent": "#000000"
+  },
+  "export": {
+    "svgWidth": 1600,
+    "pngWidth": 2400
+  }
+}

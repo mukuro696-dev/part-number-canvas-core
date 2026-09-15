@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://part-number-canvas.example/schema/v1",
+  "title": "Part Number Canvas document (schemaVersion 1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "app", "documentId", "revision", "meta", "model", "appearance", "export"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "app": { "const": "part-number-canvas" },
+    "documentId": { "type": "string", "format": "uuid" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "locale", "createdAt", "updatedAt"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 500 },
+        "locale": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "items", "notes"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "items": {
+          "type": "array",
+          "maxItems": 40,
+          "items": { "$ref": "#/$defs/item" }
+        },
+        "notes": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/note" }
+        }
+      }
+    },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codeFont", "bodyFont", "background", "accent"],
+      "properties": {
+        "codeFont": { "enum": ["robotoCondensed", "barlowCondensed", "ibmPlexSansCondensed"] },
+        "bodyFont": { "enum": ["gothic", "mincho", "design"] },
+        "background": { "enum": ["transparent", "white"] },
+        "accent": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+      }
+    },
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["svgWidth", "pngWidth"],
+      "properties": {
+        "svgWidth": { "type": "integer", "minimum": 200, "maximum": 6000 },
+        "pngWidth": { "type": "integer", "minimum": 800, "maximum": 4000 }
+      }
+    }
+  },
+  "$defs": {
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "unit"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 },
+        "unit": { "const": "grapheme" }
+      }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "description", "noteRefs"],
+      "properties": {
+        "code": { "type": "string", "maxLength": 500 },
+        "description": { "type": "string", "maxLength": 500 },
+        "noteRefs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "range", "heading", "side", "options"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "range": { "$ref": "#/$defs/range" },
+        "heading": { "type": "string", "maxLength": 500 },
+        "side": { "enum": ["left", "right", "auto"] },
+        "options": {
+          "type": "array",
+          "maxItems": 30,
+          "items": { "$ref": "#/$defs/option" }
+        }
+      }
+    },
+    "note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "text": { "type": "string", "maxLength": 500 }
+      }
+    }
+  }
+}

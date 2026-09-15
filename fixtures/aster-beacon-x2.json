@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "app": "part-number-canvas",
+  "documentId": "7b787d2d-173c-4a0e-a1db-5d3dfe6735e5",
+  "revision": 3,
+  "meta": {
+    "title": "Aster Beacon X2 (fictional sample)",
+    "locale": "ja",
+    "createdAt": "2026-09-14T06:00:00Z",
+    "updatedAt": "2026-09-14T06:30:00Z"
+  },
+  "model": {
+    "code": "ABX-120-RN",
+    "items": [
+      {
+        "id": "item-family",
+        "range": { "start": 0, "end": 3, "unit": "grapheme" },
+        "heading": "シリーズ",
+        "side": "left",
+        "options": [
+          { "code": "ABX", "description": "Aster Beacon X シリーズ（架空）", "noteRefs": [] }
+        ]
+      },
+      {
+        "id": "item-size",
+        "range": { "start": 4, "end": 7, "unit": "grapheme" },
+        "heading": "サイズ",
+        "side": "auto",
+        "options": [
+          { "code": "120", "description": "直径120 mm", "noteRefs": ["note-tolerance"] }
+        ]
+      },
+      {
+        "id": "item-color",
+        "range": { "start": 8, "end": 10, "unit": "grapheme" },
+        "heading": "本体色",
+        "side": "right",
+        "options": [
+          { "code": "RN", "description": "レッド（艶消し）", "noteRefs": [] },
+          { "code": "BN", "description": "ブルー（艶消し）", "noteRefs": [] }
+        ]
+      }
+    ],
+    "notes": [
+      { "id": "note-tolerance", "text": "サイズ寸法は架空の公差表記であり、実在製品の仕様ではない。" }
+    ]
+  },
+  "appearance": {
+    "codeFont": "robotoCondensed",
+    "bodyFont": "gothic",
+    "background": "transparent",
+    "accent": "#2563eb"
+  },
+  "export": {
+    "svgWidth": 1600,
+    "pngWidth": 2400
+  }
+}

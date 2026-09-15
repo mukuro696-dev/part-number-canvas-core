@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "app": "part-number-canvas",
+  "documentId": "00000000-0000-4000-8000-000000000001",
+  "revision": 0,
+  "meta": {
+    "title": "Invalid fixture: item missing required 'heading'",
+    "locale": "en",
+    "createdAt": "2026-09-15T00:00:00Z",
+    "updatedAt": "2026-09-15T00:00:00Z"
+  },
+  "model": {
+    "code": "X-1",
+    "items": [
+      {
+        "id": "item-broken",
+        "range": { "start": 0, "end": 1, "unit": "grapheme" },
+        "side": "auto",
+        "options": []
+      }
+    ],
+    "notes": []
+  },
+  "appearance": {
+    "codeFont": "robotoCondensed",
+    "bodyFont": "gothic",
+    "background": "transparent",
+    "accent": "#000000"
+  },
+  "export": {
+    "svgWidth": 1600,
+    "pngWidth": 2400
+  }
+}
