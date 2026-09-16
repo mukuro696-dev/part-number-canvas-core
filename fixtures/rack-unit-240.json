@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "app": "part-number-canvas",
+  "documentId": "8c1d4b27-95a6-4f03-b1de-3a7c0e6f4d52",
+  "revision": 1,
+  "meta": {
+    "title": "ラックユニット240（架空サンプル・日本語）",
+    "locale": "ja",
+    "createdAt": "2026-09-16T00:00:00Z",
+    "updatedAt": "2026-09-16T00:00:00Z"
+  },
+  "model": {
+    "code": "PNC-240-RS-W",
+    "items": [
+      {
+        "id": "item-series",
+        "range": { "start": 0, "end": 3, "unit": "grapheme" },
+        "heading": "シリーズ",
+        "side": "left",
+        "options": [
+          { "code": "PNC", "description": "標準シリーズ（架空）", "noteRefs": [] }
+        ]
+      },
+      {
+        "id": "item-width",
+        "range": { "start": 4, "end": 7, "unit": "grapheme" },
+        "heading": "本体幅",
+        "side": "left",
+        "options": [
+          { "code": "240", "description": "240 mm", "noteRefs": [] },
+          { "code": "320", "description": "320 mm", "noteRefs": [] }
+        ]
+      },
+      {
+        "id": "item-mount",
+        "range": { "start": 8, "end": 10, "unit": "grapheme" },
+        "heading": "取付方式",
+        "side": "right",
+        "options": [
+          { "code": "RS", "description": "ラックマウント{{note:note-sample}}", "noteRefs": ["note-sample"] },
+          { "code": "WS", "description": "壁掛け", "noteRefs": [] }
+        ]
+      },
+      {
+        "id": "item-color",
+        "range": { "start": 11, "end": 12, "unit": "grapheme" },
+        "heading": "本体色",
+        "side": "right",
+        "options": [
+          { "code": "W", "description": "ホワイト", "noteRefs": [] },
+          { "code": "K", "description": "ブラック", "noteRefs": [] }
+        ]
+      }
+    ],
+    "notes": [
+      { "id": "note-sample", "text": "この図版は説明用の架空の型番です。実在の製品を表すものではありません。" }
+    ]
+  },
+  "appearance": {
+    "codeFont": "robotoCondensed",
+    "bodyFont": "gothic",
+    "background": "white",
+    "accent": "#000000"
+  },
+  "export": {
+    "svgWidth": 2400,
+    "pngWidth": 2400
+  }
+}

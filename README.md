@@ -28,7 +28,7 @@ project-specific styling are intentionally out of scope here.
 | `src/lib/fonts/hbSubset.ts` | A thin wrapper around HarfBuzz's WASM subsetter (`hb-subset`), for client-side, glyph-level font subsetting |
 | `src/lib/storage/db.ts` | A small promisified IndexedDB wrapper |
 | `src/lib/consent/` | A minimal, localStorage-only cookie/consent-category store (GPC-aware) |
-| `fixtures/*.json` | Fictional example documents used by the tests |
+| `fixtures/*.json` | Fictional example documents used by the tests. `rack-unit-240.json` is the Japanese one — the typography rules above are what this engine exists for, so it runs through validation, layout, note numbering and rendering in `test/japanese-sample.test.ts` |
 | `assets/fonts/`, `assets/wasm/` | Redistributable font/WASM binaries the tests exercise, with license/attribution records |
 | `test/` | Unit tests for everything above |
 
