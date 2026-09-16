@@ -9,10 +9,18 @@ in scope.
 
 This repository is a source-code excerpt: it does not include its own
 `package.json`/build config, since it's a curated subset of a larger private
-project. To exercise it locally, wire up your own TypeScript + Vitest
-config with `react`/`react-dom`, `ajv`/`ajv-formats`, and (for the font
-tests) a WASM-capable Node runtime — the `test/` files show the exact
-imports each module needs.
+project. To exercise it locally, wire up your own TypeScript + Vitest config
+with:
+
+- `react` / `react-dom` — the renderer is a React component
+- `ajv` / `ajv-formats` — only to regenerate the validator; the committed
+  `validator.generated.mjs` imports `ajv-formats` and `ajv` at runtime
+- `@types/node` — several tests read fixtures and font files off disk, so the
+  typecheck needs Node's types even though the library itself is
+  browser-only
+- a WASM-capable Node runtime, for the font subsetting tests
+
+The `test/` files show the exact imports each module needs.
 
 ## Before opening a pull request
 
