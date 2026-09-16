@@ -16,6 +16,7 @@ export interface Warning {
     | "heavy-wrap"
     | "one-sided"
     | "unreferenced-note"
+    | "undrawable-characters"
     | "width-shortfall";
   /** todo = not written yet (expected while drafting); notice = written but worth a look */
   kind: "todo" | "notice";
@@ -35,13 +36,53 @@ const ONE_SIDED_MIN_ITEMS = 4;
  * 含まれる／折返しが多い／片側へ項目が偏っている／未参照の注記がある／
  * 項目の幅が足りない。
  */
+export interface WarningOptions {
+  /**
+   * Answers whether the diagram's font can draw a character. Injected rather
+   * than imported, because which fonts are bundled is a decision of the
+   * application around this engine, not of the engine. When it is absent the
+   * check is skipped — nothing is assumed about the fonts in use.
+   *
+   * `role` is "code" for the part number row and "body" for everything else,
+   * since those are drawn with different families.
+   */
+  isDrawable?: (char: string, role: "code" | "body") => boolean;
+}
+
 export function checkWarnings(
   code: string,
   items: PartNumberItem[],
   layout: DiagramLayout,
   notes: PartNumberNote[] = [],
+  options: WarningOptions = {},
 ): Warning[] {
   const warnings: Warning[] = [];
+
+  const { isDrawable } = options;
+  if (isDrawable) {
+    // Characters the font lacks vanish from the subset embedded on export, and
+    // the text around them lands wrong. The author's own machine hides this.
+    const undrawable = (text: string, role: "code" | "body") => {
+      const missing: string[] = [];
+      for (const char of text) {
+        if (/\s/.test(char) || missing.includes(char)) continue;
+        if (!isDrawable(char, role)) missing.push(char);
+      }
+      return missing;
+    };
+    const bodyText = items
+      .flatMap((item) => [item.heading, ...item.options.map((o) => `${o.code}${plainDescription(o.description)}`)])
+      .concat(notes.map((note) => note.text))
+      .join("");
+    const missing = [...new Set([...undrawable(code, "code"), ...undrawable(bodyText, "body")])];
+    if (missing.length > 0) {
+      warnings.push({
+        code: "undrawable-characters",
+        kind: "notice",
+        message: `図版の書体に無い文字が含まれています（${missing.slice(0, 10).join(" ")}${missing.length > 10 ? " ほか" : ""}）。書き出したファイルでは、その文字が出ないか字間が崩れます。`,
+      });
+    }
+  }
 
   for (const item of items) {
     const label = item.heading || item.id;
@@ -76,8 +117,11 @@ export function checkWarnings(
   if (FULLWIDTH_ALNUM.test(code)) {
     warnings.push({ code: "fullwidth-alnum", kind: "notice", message: "型番に全角英数字が含まれています" });
   }
-  // the part-number fonts are Latin-only, so anything else may fall back to another typeface
-  if (NON_ASCII_OTHER.test(code)) {
+  // A guess at the same problem `undrawable-characters` reports exactly: the
+  // part-number faces are Latin-only, so anything else likely has no glyph.
+  // When the caller knows the real coverage, that check has already said so and
+  // saying it twice is noise.
+  if (!isDrawable && NON_ASCII_OTHER.test(code)) {
     warnings.push({
       code: "non-ascii-code",
       kind: "notice",

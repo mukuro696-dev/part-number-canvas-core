@@ -159,3 +159,69 @@ describe("checkWarnings: characters the diagram cannot carry", () => {
     expect(checkWarnings("AB", [clean], computeLayout("AB", [clean], 2400)).some((w) => w.code === "invalid-characters")).toBe(false);
   });
 });
+
+describe("checkWarnings: characters the font has no glyph for", () => {
+  /**
+   * The engine is told what the fonts can draw; it never decides that itself,
+   * because which fonts an application bundles is that application's business.
+   * These use a stand-in that can draw ASCII and kana and nothing else.
+   */
+  const asciiAndKana = (char: string) => /[\x20-\x7e぀-ヿ]/.test(char);
+  const itemWith = (heading: string, description = "せつめい") => {
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
+    item.heading = heading;
+    item.options = [{ code: "A", description, noteRefs: [] }];
+    return item;
+  };
+  const check = (code: string, item: ReturnType<typeof itemWith>, notes: { id: string; text: string }[] = []) =>
+    checkWarnings(code, [item], computeLayout(code, [item], 2400), notes, { isDrawable: asciiAndKana });
+
+  it("says nothing while every character can be drawn", () => {
+    expect(check("AB-1", itemWith("しりーず")).some((w) => w.code === "undrawable-characters")).toBe(false);
+  });
+
+  it("names the characters that would be missing, as something to look at rather than an error", () => {
+    const warning = check("AB-1", itemWith("見出し")).find((w) => w.code === "undrawable-characters");
+    expect(warning?.kind).toBe("notice");
+    expect(warning?.message).toContain("見");
+    expect(warning?.message).toContain("出");
+  });
+
+  it("looks at the part number, the options and the notes too", () => {
+    const fromCode = check("亜-1", itemWith("しりーず")).find((w) => w.code === "undrawable-characters");
+    expect(fromCode?.message).toContain("亜");
+
+    const fromDescription = check("AB-1", itemWith("しりーず", "説")).find((w) => w.code === "undrawable-characters");
+    expect(fromDescription?.message).toContain("説");
+
+    const fromNote = check("AB-1", itemWith("しりーず"), [{ id: "n1", text: "注" }]).find(
+      (w) => w.code === "undrawable-characters",
+    );
+    expect(fromNote?.message).toContain("注");
+  });
+
+  it("lists each character once however often it appears, and caps a long list", () => {
+    const many = itemWith("亜唖娃阿哀愛挨姶逢葵茜");
+    const warning = check("AB-1", many).find((w) => w.code === "undrawable-characters");
+    expect(warning?.message).toContain("ほか");
+
+    const repeated = itemWith("亜亜亜");
+    const once = check("AB-1", repeated).find((w) => w.code === "undrawable-characters");
+    expect(once?.message.match(/亜/g)).toHaveLength(1);
+  });
+
+  it("is not raised at all when the caller says nothing about the fonts", () => {
+    const item = itemWith("見出し");
+    const warnings = checkWarnings("AB-1", [item], computeLayout("AB-1", [item], 2400));
+    expect(warnings.some((w) => w.code === "undrawable-characters")).toBe(false);
+  });
+
+  it("keeps the older guess about non-ASCII part numbers for callers that know nothing, and drops it for those that do", () => {
+    const item = itemWith("しりーず");
+    const layout = computeLayout("亜-1", [item], 2400);
+    expect(checkWarnings("亜-1", [item], layout).map((w) => w.code)).toContain("non-ascii-code");
+    expect(checkWarnings("亜-1", [item], layout, [], { isDrawable: asciiAndKana }).map((w) => w.code)).not.toContain(
+      "non-ascii-code",
+    );
+  });
+});
