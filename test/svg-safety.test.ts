@@ -64,4 +64,60 @@ describe("DiagramSvg rendered output", () => {
     );
     expect(markup).toContain('xmlns="http://www.w3.org/2000/svg"');
   });
+
+  it("keeps runs of spaces, and asks for it by rule rather than by the style attribute a strict style-src blocks", () => {
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
+    item.heading = "見 出  し";
+    item.options = [{ code: "A", description: "説明  と   空白", noteRefs: [] }];
+    const markup = renderToStaticMarkup(
+      DiagramSvg({ layout: computeLayout("A B", [item], 2400), code: "A B", background: "transparent", accent: "#2563eb" }),
+    );
+
+    // the spaces survive into the markup...
+    expect(markup).toContain("見 出  し");
+    expect(markup).toContain("説明  と   空白");
+    // ...and nothing asks for them through a style attribute
+    expect(markup).not.toContain("style=");
+    expect(markup).toContain('xml:space="preserve"');
+    expect(markup).toContain("diagram-svg");
+  });
+
+});
+
+describe("characters XML does not allow", () => {
+  it("are stripped from everything the diagram draws, so the SVG stays parseable", async () => {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { DiagramSvg } = await import("../src/components/DiagramSvg");
+    const { stripInvalidXmlChars, hasInvalidXmlChars } = await import("../src/lib/xmlText");
+    const bad = "\u0008\u001b\uffff";
+    const item = createEmptyItem({ start: 0, end: 2, unit: "grapheme" });
+    item.heading = `見出し${bad}`;
+    item.options = [{ code: `A${bad}`, description: `説明${bad}`, noteRefs: [] }];
+    const notes = [{ id: "n", text: `注記${bad}` }];
+    const layout = computeLayout(`AB${bad}`, [item], 2400, notes);
+    const markup = renderToStaticMarkup(DiagramSvg({ layout, code: `AB${bad}`, background: "transparent", accent: "#000000" }));
+    expect(hasInvalidXmlChars(markup)).toBe(false);
+    expect(checkSvgSafety(markup)).toEqual([]);
+    expect(stripInvalidXmlChars("a\u0009b\u000ac\u2028d\u{1F600}")).toBe("a\u0009b\u000ac\u2028d\u{1F600}");
+  });
+
+  it("are reported by the safety scan if they ever reach the markup", () => {
+    expect(checkSvgSafety("<svg><text>x\u0008</text></svg>").some((i) => i.code === "invalid-xml-char")).toBe(true);
+  });
+});
+
+describe("preview-only extras", () => {
+  it("leaves the clickable patches out of the exported markup", () => {
+    const item = createEmptyItem({ start: 0, end: 2, unit: "grapheme" });
+    item.heading = "見出し";
+    const layout = computeLayout("AB", [item], 2400);
+    const exported = renderToStaticMarkup(DiagramSvg({ layout, code: "AB", background: "transparent", accent: "#000000" }));
+    expect(exported).not.toContain("item-hit");
+    expect(exported).not.toContain("<title>");
+    const preview = renderToStaticMarkup(
+      DiagramSvg({ layout, code: "AB", background: "transparent", accent: "#000000", onSelectItem: () => {} }),
+    );
+    expect(preview).toContain("item-hit");
+    expect(checkSvgSafety(exported)).toEqual([]);
+  });
 });

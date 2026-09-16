@@ -5,8 +5,10 @@
  * dangerouslySetInnerHTML, so this scans the rendered markup as a
  * belt-and-suspenders check rather than a primary defense.
  */
+import { hasInvalidXmlChars } from "./xmlText";
+
 export interface SvgSafetyIssue {
-  code: "script" | "foreign-object" | "event-handler" | "external-reference" | "unresolved-token";
+  code: "script" | "foreign-object" | "event-handler" | "external-reference" | "unresolved-token" | "invalid-xml-char";
   message: string;
 }
 
@@ -18,6 +20,11 @@ const UNRESOLVED_TOKEN = /\{\{[^}]*\}\}|undefined|\[object Object\]/;
 
 export function checkSvgSafety(markup: string): SvgSafetyIssue[] {
   const issues: SvgSafetyIssue[] = [];
+
+  // one such character makes the file unparseable (and PNG rasterization fail)
+  if (hasInvalidXmlChars(markup)) {
+    issues.push({ code: "invalid-xml-char", message: "SVG markup contains a character XML does not allow" });
+  }
 
   if (/<script[\s>]/i.test(markup)) {
     issues.push({ code: "script", message: "SVG markup contains a <script> element" });

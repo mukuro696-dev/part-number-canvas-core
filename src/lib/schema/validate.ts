@@ -1,12 +1,9 @@
-import Ajv2020 from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
-import schema from "../../../schema/part-number-canvas.v1.schema.json" with { type: "json" };
+// The validator is compiled from the schema at build time
+// (scripts/build-schema-validator.mjs). Compiling it here instead would need
+// `new Function(...)`, and with it 'unsafe-eval' in the site's CSP.
+import { validate as validateFn } from "./validator.generated.mjs";
 import type { PartNumberDocument } from "./types";
 import { SCHEMA_LIMITS } from "./types";
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-const validateFn = ajv.compile(schema);
 
 export interface ValidationResult {
   valid: boolean;

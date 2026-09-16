@@ -1,4 +1,5 @@
 import { LAYOUT, type DiagramLayout } from "../lib/layout/computeLayout";
+import { stripInvalidXmlChars as xml } from "../lib/xmlText";
 
 export interface DiagramSvgProps {
   layout: DiagramLayout;
@@ -9,6 +10,8 @@ export interface DiagramSvgProps {
   pendingRange?: { start: number; end: number } | null;
   /** preview only: each item's characters tinted with the colour its card uses (never passed for export) */
   rangeTints?: { start: number; end: number; color: string }[];
+  /** preview only: makes each drawn item clickable, to reach its card (never passed for export) */
+  onSelectItem?: (itemId: string) => void;
   /** CSS font-family value for the part-number row */
   codeFontFamily?: string;
   /** CSS font-family value for headings/descriptions */
@@ -26,6 +29,7 @@ export function DiagramSvg({
   accent,
   pendingRange,
   rangeTints = [],
+  onSelectItem,
   codeFontFamily = DEFAULT_CODE_FONT_FAMILY,
   bodyFontFamily = DEFAULT_BODY_FONT_FAMILY,
 }: DiagramSvgProps) {
@@ -38,12 +42,13 @@ export function DiagramSvg({
       viewBox={`0 0 ${svgWidth} ${height}`}
       width="100%"
       role="img"
-      aria-label={`Part number diagram for ${code}`}
-      className={background === "white" ? "diagram-bg-white" : "diagram-bg-transparent"}
+      aria-label={`Part number diagram for ${xml(code)}`}
+      className={`diagram-svg ${background === "white" ? "diagram-bg-white" : "diagram-bg-transparent"}`}
       fill="#000000"
-      // positions are measured with every space kept, so the drawing must not collapse runs of spaces
+      // positions are measured with every space kept, so the drawing must not collapse runs of spaces.
+      // The matching `white-space: pre` is a rule (editor.css on screen, the embedded <style> on export)
+      // rather than a style attribute here, which a strict style-src blocks.
       xmlSpace="preserve"
-      style={{ whiteSpace: "pre" }}
     >
       {rangeTints.map((tint, i) => (
         <rect
@@ -67,7 +72,7 @@ export function DiagramSvg({
       )}
 
       <text x={codeX} y={codeRowY} fontFamily={codeFontFamily} fontSize={LAYOUT.codeSize} fontWeight={700}>
-        {code}
+        {xml(code)}
       </text>
 
       {placed.map(({ item, underline, leader, rule, label }) => {
@@ -90,7 +95,7 @@ export function DiagramSvg({
             />
             <line x1={rule.a.x} y1={rule.a.y} x2={rule.b.x} y2={rule.b.y} stroke={accent} strokeWidth={LAYOUT.leaderStroke} />
             <text x={label.x} y={label.headingY} fontFamily={bodyFontFamily} fontSize={LAYOUT.headingSize} fontWeight={700}>
-              {label.headingText}
+              {xml(label.headingText)}
             </text>
             {label.options.map((option, oi) => (
               <g key={oi}>
@@ -101,7 +106,7 @@ export function DiagramSvg({
                     fontFamily={bodyFontFamily}
                     fontSize={LAYOUT.optionSize}
                   >
-                    {option.codeText}
+                    {xml(option.codeText)}
                   </text>
                 )}
                 {option.descLines.map((line, li) => (
@@ -115,10 +120,10 @@ export function DiagramSvg({
                     {line.map((run, ri) =>
                       run.sup ? (
                         <tspan key={ri} baselineShift="super" fontSize={supSize}>
-                          {run.text}
+                          {xml(run.text)}
                         </tspan>
                       ) : (
-                        <tspan key={ri}>{run.text}</tspan>
+                        <tspan key={ri}>{xml(run.text)}</tspan>
                       ),
                     )}
                   </text>
@@ -129,6 +134,29 @@ export function DiagramSvg({
         );
       })}
 
+      {/* preview only, drawn last so it catches clicks anywhere over the item: a transparent patch
+          over each label and its underlined characters, opening the card that controls them */}
+      {onSelectItem &&
+        placed.map(({ item, underline, label }) => (
+          <g key={`hit-${item.id}`} className="item-hit" onClick={() => onSelectItem(item.id)}>
+            <title>{`「${xml(label.headingText)}」のカードへ`}</title>
+            <rect
+              x={label.bbox.x - LAYOUT.headingGap / 2}
+              y={label.bbox.y - LAYOUT.headingSize}
+              width={label.bbox.width + LAYOUT.headingGap}
+              height={label.bbox.height + LAYOUT.headingSize + LAYOUT.headingGap}
+              fill="transparent"
+            />
+            <rect
+              x={underline.a.x}
+              y={underline.a.y - LAYOUT.codeSize}
+              width={Math.max(1, underline.b.x - underline.a.x)}
+              height={LAYOUT.codeSize + LAYOUT.underlineStroke}
+              fill="transparent"
+            />
+          </g>
+        ))}
+
       {footnotesRuleY !== null && (
         <line x1={footnoteX} y1={footnotesRuleY} x2={footnotesRuleEndX} y2={footnotesRuleY} stroke="#cccccc" strokeWidth={1} />
       )}
@@ -136,7 +164,7 @@ export function DiagramSvg({
         <text key={`footnote-${fn.number}`} x={footnoteX} y={fn.y} fontFamily={bodyFontFamily} fontSize={LAYOUT.footnoteSize}>
           {fn.lines.map((line, i) => (
             <tspan key={i} x={footnoteX} dy={i === 0 ? 0 : LAYOUT.footnoteSize * LAYOUT.footnoteLineHeight}>
-              {line}
+              {xml(line)}
             </tspan>
           ))}
         </text>

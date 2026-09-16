@@ -147,3 +147,15 @@ describe("checkWarnings: references written in the text", () => {
     expect(checkWarnings("AB", [item], layout, [note]).some((w) => w.code === "unreferenced-note")).toBe(false);
   });
 });
+
+describe("checkWarnings: characters the diagram cannot carry", () => {
+  it("notices control characters pasted into any text", () => {
+    const item = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
+    item.heading = "見出し\u0008";
+    const layout = computeLayout("AB", [item], 2400);
+    expect(checkWarnings("AB", [item], layout).find((w) => w.code === "invalid-characters")?.kind).toBe("notice");
+    const clean = createEmptyItem({ start: 0, end: 1, unit: "grapheme" });
+    clean.heading = "見出し";
+    expect(checkWarnings("AB", [clean], computeLayout("AB", [clean], 2400)).some((w) => w.code === "invalid-characters")).toBe(false);
+  });
+});

@@ -73,3 +73,23 @@ describe("parseAndValidateJson", () => {
     }
   });
 });
+
+describe("the compiled validator", () => {
+  it("matches the schema it was generated from (re-run scripts/build-schema-validator.mjs after editing the schema)", async () => {
+    const { generateValidatorSource } = await import("../scripts/build-schema-validator.mjs");
+    const committed = readFileSync(
+      fileURLToPath(new URL("../src/lib/schema/validator.generated.mjs", import.meta.url)),
+      "utf-8",
+    );
+    expect(generateValidatorSource()).toBe(committed);
+    // a leftover CommonJS require throws in the browser as soon as the module loads
+    expect(committed).not.toMatch(/\brequire\(/);
+  });
+
+  it("is ordinary code, so a page embedding it needs no 'unsafe-eval'", async () => {
+    const { generateValidatorSource } = await import("../scripts/build-schema-validator.mjs");
+    const source = generateValidatorSource();
+    expect(source).not.toMatch(/\bnew Function\b/);
+    expect(source).not.toMatch(/\beval\(/);
+  });
+});

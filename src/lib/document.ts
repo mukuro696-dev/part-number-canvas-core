@@ -45,6 +45,7 @@ export function buildDocument(params: {
   bodyFont?: BodyFont;
   codeFont?: CodeFont;
   notes?: PartNumberNote[];
+  pngWidth?: number;
 }): PartNumberDocument {
   return {
     schemaVersion: 1,
@@ -70,7 +71,7 @@ export function buildDocument(params: {
     },
     export: {
       svgWidth: 2400,
-      pngWidth: 2400,
+      pngWidth: params.pngWidth ?? 2400,
     },
   };
 }

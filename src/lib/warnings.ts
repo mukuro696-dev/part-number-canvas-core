@@ -1,6 +1,7 @@
 import type { PartNumberItem, PartNumberNote } from "./schema/types";
 import { LAYOUT, type DiagramLayout } from "./layout/computeLayout";
 import { noteRefsIn, plainDescription } from "./noteTokens";
+import { hasInvalidXmlChars } from "./xmlText";
 
 export interface Warning {
   code:
@@ -11,6 +12,7 @@ export interface Warning {
     | "duplicate-heading"
     | "fullwidth-alnum"
     | "non-ascii-code"
+    | "invalid-characters"
     | "heavy-wrap"
     | "one-sided"
     | "unreferenced-note"
@@ -117,6 +119,19 @@ export function checkWarnings(
       warnings.push({ code: "empty-note-text", kind: "todo", message: `注記${number ?? ""}の本文が空です` });
     }
   });
+
+  const texts = [
+    code,
+    ...items.flatMap((item) => [item.heading, ...item.options.flatMap((o) => [o.code, o.description])]),
+    ...notes.map((n) => n.text),
+  ];
+  if (texts.some(hasInvalidXmlChars)) {
+    warnings.push({
+      code: "invalid-characters",
+      kind: "notice",
+      message: "図版に使えない文字（制御文字など）が含まれています。描画と書き出しでは取り除きます。貼り付けた文字を確認してください",
+    });
+  }
 
   const referencedNoteIds = new Set(items.flatMap((item) => item.options.flatMap((opt) => [...opt.noteRefs, ...noteRefsIn(opt.description)])));
   for (const note of notes) {

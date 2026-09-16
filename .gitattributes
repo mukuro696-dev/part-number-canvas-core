@@ -1,0 +1,6 @@
+# Generated files are compared byte for byte by the tests, so they must not be
+# checked out with platform line endings.
+*.mjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
