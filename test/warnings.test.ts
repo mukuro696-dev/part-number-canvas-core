@@ -128,6 +128,32 @@ describe("checkWarnings: kinds and part-number characters", () => {
   });
 });
 
+describe("checkWarnings: what an item is called before it has a heading", () => {
+  it("names it by the characters it covers, never by its internal id", () => {
+    const item = createEmptyItem({ start: 4, end: 7, unit: "grapheme" });
+    const layout = computeLayout("ABX-120-RN", [item], 2400);
+    const warning = checkWarnings("ABX-120-RN", [item], layout).find((w) => w.code === "empty-heading");
+    // this is the first thing said about every item anyone makes
+    expect(warning).toMatchObject({ label: "120" });
+    expect(warning?.label).not.toContain(item.id);
+  });
+
+  it("prefers the heading once there is one", () => {
+    const item = createEmptyItem({ start: 4, end: 7, unit: "grapheme" });
+    item.heading = "  ";
+    item.options = [{ code: "", description: "", noteRefs: [] }];
+    const layout = computeLayout("ABX-120-RN", [item], 2400);
+    const blank = checkWarnings("ABX-120-RN", [item], layout).find((w) => w.code === "empty-option-code");
+    expect(blank).toMatchObject({ label: "120" });
+
+    item.heading = "本体幅";
+    const named = checkWarnings("ABX-120-RN", [item], computeLayout("ABX-120-RN", [item], 2400)).find(
+      (w) => w.code === "empty-option-code",
+    );
+    expect(named).toMatchObject({ label: "本体幅" });
+  });
+});
+
 describe("checkWarnings: empty note text", () => {
   it("lists a note with no text as something not yet written, using its drawing number", () => {
     const note = { id: "n1", text: "  " };

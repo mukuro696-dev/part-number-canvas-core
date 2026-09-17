@@ -208,7 +208,13 @@ export interface NoteIssue {
  * Mirrors the Phase 1 "保存を止めるエラー" rule 存在しない注記を参照する:
  * an option's noteRefs must only point at notes that actually exist.
  */
-export function checkNoteReferences(items: PartNumberItem[], notes: PartNumberNote[]): NoteIssue[] {
+export function checkNoteReferences(
+  items: PartNumberItem[],
+  notes: PartNumberNote[],
+  /** the part number, so an item with no heading is named by what it covers */
+  code = "",
+): NoteIssue[] {
+  const graphemes = toGraphemes(code);
   const noteIds = new Set(notes.map((n) => n.id));
   const issues: NoteIssue[] = [];
   for (const item of items) {
@@ -217,7 +223,10 @@ export function checkNoteReferences(items: PartNumberItem[], notes: PartNumberNo
         if (!noteIds.has(ref)) {
           issues.push({
             itemId: item.id,
-            label: item.heading || item.id,
+            label:
+              item.heading.trim() ||
+              graphemes.slice(item.range.start, item.range.end).join("") ||
+              item.id,
           });
         }
       }

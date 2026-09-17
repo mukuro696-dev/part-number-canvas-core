@@ -1,6 +1,7 @@
 import type { PartNumberItem, PartNumberNote } from "./schema/types";
 import { LAYOUT, type DiagramLayout } from "./layout/computeLayout";
 import { noteRefsIn, plainDescription } from "./noteTokens";
+import { toGraphemes } from "./graphemes";
 import { hasInvalidXmlChars } from "./xmlText";
 
 /**
@@ -63,6 +64,21 @@ export interface WarningOptions {
   isDrawable?: (char: string, role: "code" | "body") => boolean;
 }
 
+/**
+ * What to call an item in a message.
+ *
+ * Its heading, once it has one. Until then the characters it covers — which is
+ * what the card beside it shows, and what the reader can actually find on
+ * screen. The id is the last resort and should never be reached: it identifies
+ * the item to the program, not to anyone reading.
+ */
+function nameOf(item: PartNumberItem, graphemes: string[]): string {
+  const heading = item.heading.trim();
+  if (heading) return heading;
+  const covered = graphemes.slice(item.range.start, item.range.end).join("");
+  return covered || item.id;
+}
+
 export function checkWarnings(
   code: string,
   items: PartNumberItem[],
@@ -71,6 +87,7 @@ export function checkWarnings(
   options: WarningOptions = {},
 ): Warning[] {
   const warnings: Warning[] = [];
+  const graphemes = toGraphemes(code);
 
   const { isDrawable } = options;
   if (isDrawable) {
@@ -95,7 +112,7 @@ export function checkWarnings(
   }
 
   for (const item of items) {
-    const label = item.heading || item.id;
+    const label = nameOf(item, graphemes);
     if (!item.heading.trim()) {
       warnings.push({ code: "empty-heading", kind: "todo", itemId: item.id, label });
     }
@@ -136,7 +153,7 @@ export function checkWarnings(
   }
 
   for (const placed of layout.placed) {
-    const label = placed.item.heading || placed.item.id;
+    const label = nameOf(placed.item, graphemes);
     if (placed.label.options.some((o) => o.descLines.length > LAYOUT.maxWrapLines)) {
       warnings.push({
         code: "heavy-wrap",
@@ -154,7 +171,7 @@ export function checkWarnings(
       code: "width-shortfall",
       kind: "notice",
       itemId: s.itemId,
-      label: item?.heading || s.itemId,
+      label: item ? nameOf(item, graphemes) : s.itemId,
       available: s.available,
       required: s.required,
     });
