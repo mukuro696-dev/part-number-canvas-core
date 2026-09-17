@@ -2,6 +2,7 @@ import type { PartNumberItem, PartNumberNote } from "../schema/types";
 import { toGraphemes } from "../graphemes";
 import { itemsWithInlineNotes, noteRefsIn, parseDescription } from "../noteTokens";
 import type { Point, Rect } from "./geometry";
+import { JAPANESE_NOTATION, notationFor, type Notation } from "../notation";
 
 export type TextRole = "code" | "heading" | "body";
 /** Width in px of `text` set in the font for `role` at `size`. */
@@ -55,8 +56,12 @@ const SEPARATOR = "\u00a0=\u00a0";
 /**
  * Drawn before every note number, in the text and in the footnote list.
  * A bare superscript digit after a unit reads as a power: "240 V¹".
+ *
+ * The Japanese default, kept as a named export because it is the mark every
+ * document written before this was drawn with. Which mark a given diagram
+ * actually gets comes from `notationFor()` and rides on the layout.
  */
-export const NOTE_MARK = "※";
+export const NOTE_MARK = JAPANESE_NOTATION.noteMark;
 const BREAK_AFTER = "・／/、，,";
 /** never at the start of a line (行頭禁則) */
 const NO_LINE_START = "、。，．,.）)］]｝}」』】〕〉》・：；:;！!？?ー々ゝゞぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ％%";
@@ -150,6 +155,12 @@ export interface DiagramLayout {
   shortfalls: WidthShortfall[];
   /** note id -> the number shown in the drawing; the one numbering everything else should use */
   noteNumbers: Map<string, number>;
+  /**
+   * The punctuation this diagram was drawn with, decided once here from the
+   * document's own text. The exporter and the text summary read it back rather
+   * than deciding again, so the three cannot disagree about one document.
+   */
+  notation: Notation;
 }
 
 interface Token {
@@ -207,7 +218,7 @@ function glueTokens(text: string, firstId: number): { tokens: Token[]; nextId: n
  * before it so a line never starts with a marker. References to notes that
  * don't exist draw nothing (the blocking check reports them).
  */
-function descriptionTokens(description: string, noteNumbers: Map<string, number>): Token[] {
+function descriptionTokens(description: string, noteNumbers: Map<string, number>, noteMark: string): Token[] {
   const tokens: Token[] = [];
   let nextId = 0;
   let pending: number[] = [];
@@ -223,7 +234,7 @@ function descriptionTokens(description: string, noteNumbers: Map<string, number>
   };
   const flush = () => {
     if (pending.length === 0) return;
-    const text = [...new Set(pending)].sort((a, b) => a - b).map((n) => `${NOTE_MARK}${n}`).join("");
+    const text = [...new Set(pending)].sort((a, b) => a - b).map((n) => `${noteMark}${n}`).join("");
     tokens.push({ text, marker: true, glue: -1 });
     // bind the marker to the last visible character before it, spaces in between included
     let k = tokens.length - 2;
@@ -344,8 +355,10 @@ export function wrapDescription(
   maxWidth: number,
   indent: number,
   measure: MeasureText,
+  // required: a default here would quietly draw ※ into an English diagram
+  noteMark: string,
 ): DescRun[][] {
-  return linesToRuns(wrapTokens(descriptionTokens(description, noteNumbers), maxWidth, indent, measure));
+  return linesToRuns(wrapTokens(descriptionTokens(description, noteNumbers, noteMark), maxWidth, indent, measure));
 }
 
 /**
@@ -368,8 +381,8 @@ export function numberNotes(itemsInReadingOrder: PartNumberItem[], notes: PartNu
 }
 
 /** The widest piece the wrapper can never split: a glued unit (with its marker) or a character kept together by 禁則. */
-function minimumTokenWidth(desc: string, noteNumbers: Map<string, number>, measure: MeasureText): number {
-  const tokens = descriptionTokens(desc, noteNumbers);
+function minimumTokenWidth(desc: string, noteNumbers: Map<string, number>, measure: MeasureText, noteMark: string): number {
+  const tokens = descriptionTokens(desc, noteNumbers, noteMark);
   let widest = 0;
   let group: Token[] = [];
   const close = () => {
@@ -411,6 +424,7 @@ export function computeLayout(
   svgWidth: number,
   notes: PartNumberNote[] = [],
   measure: MeasureText = approxMeasure,
+  notation: Notation = notationFor(code, items, notes),
 ): DiagramLayout {
   // data written before inline references keeps its old look: references land at the end
   items = itemsWithInlineNotes(items);
@@ -439,7 +453,7 @@ export function computeLayout(
 
   const toCell = ({ item, mid }: { item: PartNumberItem; mid: number }): Cell => {
     // blank-only text counts as empty, the same as the warnings do
-    const headingText = item.heading.trim() ? item.heading : "(見出し未設定)";
+    const headingText = item.heading.trim() ? item.heading : notation.missingHeading;
     const headingWidth = measure(headingText, "heading", LAYOUT.headingSize);
     const codeColumnWidth = Math.max(
       0,
@@ -447,9 +461,9 @@ export function computeLayout(
     );
     const descWidth = Math.max(
       0,
-      ...item.options.map((o) => lineWidth(descriptionTokens(o.description, noteNumberById), LAYOUT.optionSize, measure)),
+      ...item.options.map((o) => lineWidth(descriptionTokens(o.description, noteNumberById, notation.noteMark), LAYOUT.optionSize, measure)),
     );
-    const tokenWidth = Math.max(0, ...item.options.map((o) => minimumTokenWidth(o.description, noteNumberById, measure)));
+    const tokenWidth = Math.max(0, ...item.options.map((o) => minimumTokenWidth(o.description, noteNumberById, measure, notation.noteMark)));
     return {
       item,
       headingText,
@@ -521,7 +535,7 @@ export function computeLayout(
       let contentWidth = c.headingWidth;
       const options: OptionLayout[] = c.item.options.map((o) => {
         const codeText = o.code.trim() ? o.code + SEPARATOR : "";
-        const lines = wrapTokens(descriptionTokens(o.description, noteNumberById), descWidth, indent, measure);
+        const lines = wrapTokens(descriptionTokens(o.description, noteNumberById, notation.noteMark), descWidth, indent, measure);
         lines.forEach((line, i) => {
           contentWidth = Math.max(contentWidth, c.codeColumnWidth + (i > 0 ? indent : 0) + lineWidth(line, LAYOUT.optionSize, measure));
         });
@@ -599,7 +613,7 @@ export function computeLayout(
     const maxWidth = svgWidth - LAYOUT.edge - footnoteX;
     [...notes].sort((a, b) => noteNumberById.get(a.id)! - noteNumberById.get(b.id)!).forEach((note) => {
       const number = noteNumberById.get(note.id)!;
-      const lines = wrapFootnote(`${NOTE_MARK}${number} ${note.text}`, maxWidth, measure);
+      const lines = wrapFootnote(`${notation.noteMark}${number} ${note.text}`, maxWidth, measure);
       for (const line of lines) {
         footnotesRuleEndX = Math.max(footnotesRuleEndX, footnoteX + measure(line, "body", LAYOUT.footnoteSize));
       }
@@ -615,6 +629,7 @@ export function computeLayout(
     codeRowY,
     codeX: shiftedCodeX,
     graphemes,
+    notation,
     charX: (index: number) => shiftedCodeX + xs[Math.max(0, Math.min(index, graphemes.length))],
     placed,
     footnotes,

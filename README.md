@@ -22,6 +22,7 @@ project-specific styling are intentionally out of scope here.
 | `src/lib/layout/` | The pure-function SVG layout engine: label placement, leader-line routing, wrapping (with Japanese line-break rules), note numbering in reading order, geometric collision/crossing checks, canvas-based text measurement, and an on-demand left/right re-arrangement search |
 | `src/lib/noteTokens.ts` | Inline note references inside option descriptions (`{{note:ID}}`): parsing, migration from the older end-of-text form, and cleanup when a note is deleted |
 | `src/lib/summary.ts` | A plain-text summary of a diagram (for alt text or spec drafts) |
+| `src/lib/notation.ts` | The punctuation the engine supplies around what the author wrote: the note mark, the placeholder for an empty heading, the separators in the summary. Chosen from the document's own text rather than from an interface language or a setting — a document with no Japanese anywhere gets `*`, not `※` |
 | `src/components/DiagramSvg.tsx` | The SVG renderer (React component, safe by construction — no script/foreignObject/external refs, and no style attribute, which a strict `style-src` blocks and no hash can allow) |
 | `src/lib/svg-safety.ts` | A static scan that rejects unsafe SVG output before it's ever offered for download |
 | `src/lib/export/pngExport.ts` | Canvas-based SVG→PNG rasterization |
