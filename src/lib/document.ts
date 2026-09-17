@@ -78,7 +78,12 @@ export function buildDocument(params: {
 
 export interface RangeIssue {
   itemId: string;
-  message: string;
+  /** "overlap" names the two items; "invalid" is a programming error and keeps its own text */
+  kind: "invalid" | "overlap";
+  /** for "invalid": the detail a developer needs */
+  message?: string;
+  /** for "overlap": the two headings, in the order they appear */
+  names?: [string, string];
 }
 
 /**
@@ -95,6 +100,7 @@ export function checkItemRanges(code: string, items: PartNumberItem[]): RangeIss
     if (start < 0 || end <= start || end > length) {
       issues.push({
         itemId: item.id,
+        kind: "invalid",
         message: `range [${start}, ${end}) is invalid for a ${length}-grapheme code`,
       });
     }
@@ -109,7 +115,7 @@ export function checkItemRanges(code: string, items: PartNumberItem[]): RangeIss
     if (!reach || next.range.end > reach.range.end) reach = next;
     if (prev && next.range.start < prev.range.end) {
       const name = (item: PartNumberItem) => item.heading.trim() || graphemes.slice(item.range.start, item.range.end).join("");
-      issues.push({ itemId: next.id, message: `項目「${name(prev)}」と「${name(next)}」の範囲が重なっています` });
+      issues.push({ itemId: next.id, kind: "overlap", names: [name(prev), name(next)] });
     }
   }
   return issues;
@@ -194,7 +200,8 @@ export function reflowItemRanges(
 
 export interface NoteIssue {
   itemId: string;
-  message: string;
+  /** the heading of the item whose reference does not resolve */
+  label: string;
 }
 
 /**
@@ -210,7 +217,7 @@ export function checkNoteReferences(items: PartNumberItem[], notes: PartNumberNo
         if (!noteIds.has(ref)) {
           issues.push({
             itemId: item.id,
-            message: `項目「${item.heading || item.id}」が存在しない注記を参照しています`,
+            label: item.heading || item.id,
           });
         }
       }

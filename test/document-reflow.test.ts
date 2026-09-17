@@ -92,7 +92,8 @@ describe("checkItemRanges: overlapping items", () => {
     const issues = checkItemRanges("ABCDEFGHIJ", [a, b, c]);
     // c overlaps a even though b sits between them
     expect(issues.map((i) => i.itemId).sort()).toEqual([b.id, c.id].sort());
-    expect(issues.find((i) => i.itemId === c.id)?.message).toContain("「長い範囲」と「E」");
+    // the finding names the two items; the sentence about them is the caller's
+    expect(issues.find((i) => i.itemId === c.id)).toMatchObject({ kind: "overlap", names: ["長い範囲", "E"] });
   });
 
   it("accepts ranges that only touch", () => {

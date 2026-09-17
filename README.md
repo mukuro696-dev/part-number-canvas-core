@@ -17,8 +17,8 @@ project-specific styling are intentionally out of scope here.
 | `src/lib/schema/` | Schema types and validation. The validator is compiled from the schema ahead of time (`scripts/build-schema-validator.mjs`, Ajv's standalone code generation) and committed as `validator.generated.mjs`, so nothing calls `new Function` in the browser and a page embedding it needs no `'unsafe-eval'` in its Content-Security-Policy |
 | `src/lib/graphemes.ts` | Grapheme-cluster-aware string helpers (`Intl.Segmenter`-based) |
 | `src/lib/xmlText.ts` | Finds and strips the characters XML does not allow. One of them anywhere in the text makes the whole SVG unparseable, so an export fails with nothing useful to show the reader |
-| `src/lib/document.ts` | Document construction and structural validation (item ranges, note references) |
-| `src/lib/warnings.ts` | Non-blocking content checks (empty fields, duplicate headings, unreferenced notes, layout balance, ...) |
+| `src/lib/document.ts` | Document construction and structural validation (item ranges, note references). Reports what it found rather than a sentence about it, for the same reason as `warnings.ts` |
+| `src/lib/warnings.ts` | Non-blocking content checks (empty fields, duplicate headings, unreferenced notes, layout balance, characters the font cannot draw, ...). Each finding names itself and carries the values a message would need — **the wording is yours**, since this library does not know what language it is being used in |
 | `src/lib/layout/` | The pure-function SVG layout engine: label placement, leader-line routing, wrapping (with Japanese line-break rules), note numbering in reading order, geometric collision/crossing checks, canvas-based text measurement, and an on-demand left/right re-arrangement search |
 | `src/lib/noteTokens.ts` | Inline note references inside option descriptions (`{{note:ID}}`): parsing, migration from the older end-of-text form, and cleanup when a note is deleted |
 | `src/lib/summary.ts` | A plain-text summary of a diagram (for alt text or spec drafts) |

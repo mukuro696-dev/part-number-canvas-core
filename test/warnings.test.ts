@@ -133,7 +133,7 @@ describe("checkWarnings: empty note text", () => {
     const note = { id: "n1", text: "  " };
     const layout = computeLayout("AB", [], 2400, [note]);
     const warning = checkWarnings("AB", [], layout, [note]).find((w) => w.code === "empty-note-text");
-    expect(warning).toMatchObject({ kind: "todo", message: "注記1の本文が空です" });
+    expect(warning).toMatchObject({ kind: "todo", number: 1 });
   });
 });
 
@@ -183,31 +183,33 @@ describe("checkWarnings: characters the font has no glyph for", () => {
   it("names the characters that would be missing, as something to look at rather than an error", () => {
     const warning = check("AB-1", itemWith("見出し")).find((w) => w.code === "undrawable-characters");
     expect(warning?.kind).toBe("notice");
-    expect(warning?.message).toContain("見");
-    expect(warning?.message).toContain("出");
+    // the finding carries the characters; the sentence about them is the caller's
+    expect(warning?.missing).toContain("見");
+    expect(warning?.missing).toContain("出");
   });
 
   it("looks at the part number, the options and the notes too", () => {
     const fromCode = check("亜-1", itemWith("しりーず")).find((w) => w.code === "undrawable-characters");
-    expect(fromCode?.message).toContain("亜");
+    expect(fromCode?.missing).toContain("亜");
 
     const fromDescription = check("AB-1", itemWith("しりーず", "説")).find((w) => w.code === "undrawable-characters");
-    expect(fromDescription?.message).toContain("説");
+    expect(fromDescription?.missing).toContain("説");
 
     const fromNote = check("AB-1", itemWith("しりーず"), [{ id: "n1", text: "注" }]).find(
       (w) => w.code === "undrawable-characters",
     );
-    expect(fromNote?.message).toContain("注");
+    expect(fromNote?.missing).toContain("注");
   });
 
-  it("lists each character once however often it appears, and caps a long list", () => {
+  it("lists each character once however often it appears", () => {
     const many = itemWith("亜唖娃阿哀愛挨姶逢葵茜");
     const warning = check("AB-1", many).find((w) => w.code === "undrawable-characters");
-    expect(warning?.message).toContain("ほか");
+    // all of them: trimming the list for display is the caller's decision
+    expect(warning?.missing).toHaveLength(11);
 
     const repeated = itemWith("亜亜亜");
     const once = check("AB-1", repeated).find((w) => w.code === "undrawable-characters");
-    expect(once?.message.match(/亜/g)).toHaveLength(1);
+    expect(once?.missing.filter((c) => c === "亜")).toHaveLength(1);
   });
 
   it("is not raised at all when the caller says nothing about the fonts", () => {

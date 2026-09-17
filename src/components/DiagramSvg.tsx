@@ -12,6 +12,12 @@ export interface DiagramSvgProps {
   rangeTints?: { start: number; end: number; color: string }[];
   /** preview only: makes each drawn item clickable, to reach its card (never passed for export) */
   onSelectItem?: (itemId: string) => void;
+  /**
+   * Names that link for a screen reader. Supplied rather than written here:
+   * this renderer is published on its own and does not know the language
+   * around it. Without it the link simply goes unnamed.
+   */
+  describeSelectItem?: (heading: string) => string;
   /** CSS font-family value for the part-number row */
   codeFontFamily?: string;
   /** CSS font-family value for headings/descriptions */
@@ -30,6 +36,7 @@ export function DiagramSvg({
   pendingRange,
   rangeTints = [],
   onSelectItem,
+  describeSelectItem,
   codeFontFamily = DEFAULT_CODE_FONT_FAMILY,
   bodyFontFamily = DEFAULT_BODY_FONT_FAMILY,
 }: DiagramSvgProps) {
@@ -139,7 +146,7 @@ export function DiagramSvg({
       {onSelectItem &&
         placed.map(({ item, underline, label }) => (
           <g key={`hit-${item.id}`} className="item-hit" onClick={() => onSelectItem(item.id)}>
-            <title>{`「${xml(label.headingText)}」のカードへ`}</title>
+            {describeSelectItem && <title>{describeSelectItem(xml(label.headingText))}</title>}
             <rect
               x={label.bbox.x - LAYOUT.headingGap / 2}
               y={label.bbox.y - LAYOUT.headingSize}

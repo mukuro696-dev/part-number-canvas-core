@@ -3,26 +3,40 @@ import { LAYOUT, type DiagramLayout } from "./layout/computeLayout";
 import { noteRefsIn, plainDescription } from "./noteTokens";
 import { hasInvalidXmlChars } from "./xmlText";
 
-export interface Warning {
-  code:
-    | "empty-heading"
-    | "empty-option-code"
-    | "empty-option-description"
-    | "empty-note-text"
-    | "duplicate-heading"
-    | "fullwidth-alnum"
-    | "non-ascii-code"
-    | "invalid-characters"
-    | "heavy-wrap"
-    | "one-sided"
-    | "unreferenced-note"
-    | "undrawable-characters"
-    | "width-shortfall";
-  /** todo = not written yet (expected while drafting); notice = written but worth a look */
-  kind: "todo" | "notice";
-  itemId?: string;
-  message: string;
-}
+/**
+ * What the checks found, as facts rather than sentences.
+ *
+ * This engine does not know what language it is being used in, so it does not
+ * write the message. Each finding names itself and carries the values a
+ * message would need; whatever displays it supplies the words.
+ *
+ * `kind` separates "not written yet" — ordinary while drafting — from "written,
+ * but worth a look".
+ */
+export type WarningKind = "todo" | "notice";
+
+export type Warning =
+  | { code: "empty-heading"; kind: "todo"; itemId: string; label: string }
+  | { code: "empty-option-code"; kind: "todo"; itemId: string; label: string }
+  | { code: "empty-option-description"; kind: "todo"; itemId: string; label: string }
+  | { code: "empty-note-text"; kind: "todo"; number?: number }
+  | { code: "duplicate-heading"; kind: "notice"; heading: string; count: number }
+  | { code: "fullwidth-alnum"; kind: "notice" }
+  | { code: "non-ascii-code"; kind: "notice" }
+  | { code: "invalid-characters"; kind: "notice" }
+  | { code: "heavy-wrap"; kind: "notice"; itemId: string; label: string; maxLines: number }
+  | { code: "one-sided"; kind: "notice" }
+  | { code: "unreferenced-note"; kind: "notice"; label: string }
+  | {
+      code: "undrawable-characters";
+      kind: "notice";
+      /** the characters with no glyph, in the order they were met */
+      missing: string[];
+    }
+  | { code: "width-shortfall"; kind: "notice"; itemId: string; label: string; available: number; required: number };
+
+/** Every finding that points at one item carries its id. */
+export type WarningWithItem = Extract<Warning, { itemId: string }>;
 
 const FULLWIDTH_ALNUM = /[０-９Ａ-Ｚａ-ｚ]/;
 /** outside printable ASCII and not already covered by the full-width alphanumeric warning */
@@ -76,26 +90,22 @@ export function checkWarnings(
       .join("");
     const missing = [...new Set([...undrawable(code, "code"), ...undrawable(bodyText, "body")])];
     if (missing.length > 0) {
-      warnings.push({
-        code: "undrawable-characters",
-        kind: "notice",
-        message: `図版の書体に無い文字が含まれています（${missing.slice(0, 10).join(" ")}${missing.length > 10 ? " ほか" : ""}）。書き出したファイルでは、その文字が出ないか字間が崩れます。`,
-      });
+      warnings.push({ code: "undrawable-characters", kind: "notice", missing });
     }
   }
 
   for (const item of items) {
     const label = item.heading || item.id;
     if (!item.heading.trim()) {
-      warnings.push({ code: "empty-heading", kind: "todo", itemId: item.id, message: `項目「${label}」の見出しが空です` });
+      warnings.push({ code: "empty-heading", kind: "todo", itemId: item.id, label });
     }
     for (const option of item.options) {
       if (!option.code.trim()) {
-        warnings.push({ code: "empty-option-code", kind: "todo", itemId: item.id, message: `項目「${label}」に型番中の表記が未入力の選択肢があります` });
+        warnings.push({ code: "empty-option-code", kind: "todo", itemId: item.id, label });
       }
       // a description holding only note references still has nothing written in it
       if (!plainDescription(option.description).trim()) {
-        warnings.push({ code: "empty-option-description", kind: "todo", itemId: item.id, message: `項目「${label}」に説明が未入力の選択肢があります` });
+        warnings.push({ code: "empty-option-description", kind: "todo", itemId: item.id, label });
       }
     }
   }
@@ -110,23 +120,19 @@ export function checkWarnings(
   }
   for (const [heading, ids] of headingGroups) {
     if (ids.length > 1) {
-      warnings.push({ code: "duplicate-heading", kind: "notice", message: `見出し「${heading}」が${ids.length}件の項目で重複しています` });
+      warnings.push({ code: "duplicate-heading", kind: "notice", heading, count: ids.length });
     }
   }
 
   if (FULLWIDTH_ALNUM.test(code)) {
-    warnings.push({ code: "fullwidth-alnum", kind: "notice", message: "型番に全角英数字が含まれています" });
+    warnings.push({ code: "fullwidth-alnum", kind: "notice" });
   }
   // A guess at the same problem `undrawable-characters` reports exactly: the
   // part-number faces are Latin-only, so anything else likely has no glyph.
   // When the caller knows the real coverage, that check has already said so and
   // saying it twice is noise.
   if (!isDrawable && NON_ASCII_OTHER.test(code)) {
-    warnings.push({
-      code: "non-ascii-code",
-      kind: "notice",
-      message: "型番に英数字・記号以外の文字が含まれています。型番行の書体に字が無く、別の書体で表示される可能性があります",
-    });
+    warnings.push({ code: "non-ascii-code", kind: "notice" });
   }
 
   for (const placed of layout.placed) {
@@ -136,7 +142,8 @@ export function checkWarnings(
         code: "heavy-wrap",
         kind: "notice",
         itemId: placed.item.id,
-        message: `項目「${label}」の説明が${LAYOUT.maxWrapLines}行を超えて折り返しています`,
+        label,
+        maxLines: LAYOUT.maxWrapLines,
       });
     }
   }
@@ -147,20 +154,22 @@ export function checkWarnings(
       code: "width-shortfall",
       kind: "notice",
       itemId: s.itemId,
-      message: `項目「${item?.heading || s.itemId}」の幅が足りません（使える幅 ${s.available} に対し ${s.required} 必要）。説明を短くするか、左右の配置を変えてください`,
+      label: item?.heading || s.itemId,
+      available: s.available,
+      required: s.required,
     });
   }
 
   const leftCount = layout.placed.filter((p) => p.band === "left").length;
   const rightCount = layout.placed.filter((p) => p.band === "right").length;
   if (leftCount + rightCount >= ONE_SIDED_MIN_ITEMS && (leftCount === 0 || rightCount === 0)) {
-    warnings.push({ code: "one-sided", kind: "notice", message: "項目が片側に偏っています" });
+    warnings.push({ code: "one-sided", kind: "notice" });
   }
 
   notes.forEach((note) => {
     if (!note.text.trim()) {
       const number = layout.noteNumbers.get(note.id);
-      warnings.push({ code: "empty-note-text", kind: "todo", message: `注記${number ?? ""}の本文が空です` });
+      warnings.push({ code: "empty-note-text", kind: "todo", number });
     }
   });
 
@@ -170,17 +179,13 @@ export function checkWarnings(
     ...notes.map((n) => n.text),
   ];
   if (texts.some(hasInvalidXmlChars)) {
-    warnings.push({
-      code: "invalid-characters",
-      kind: "notice",
-      message: "図版に使えない文字（制御文字など）が含まれています。描画と書き出しでは取り除きます。貼り付けた文字を確認してください",
-    });
+    warnings.push({ code: "invalid-characters", kind: "notice" });
   }
 
   const referencedNoteIds = new Set(items.flatMap((item) => item.options.flatMap((opt) => [...opt.noteRefs, ...noteRefsIn(opt.description)])));
   for (const note of notes) {
     if (!referencedNoteIds.has(note.id)) {
-      warnings.push({ code: "unreferenced-note", kind: "notice", message: `注記「${note.text || note.id}」がどの項目からも参照されていません` });
+      warnings.push({ code: "unreferenced-note", kind: "notice", label: note.text || note.id });
     }
   }
 
