@@ -33,22 +33,34 @@ export interface Notation {
   fieldSeparator: string;
 }
 
-export const JAPANESE_NOTATION: Notation = {
-  language: "ja",
-  noteMark: "※",
-  missingHeading: "(見出し未設定)",
-  optionSeparator: "、",
-  headingSeparator: "：",
-  fieldSeparator: "｜",
-};
+/**
+ * Which set of conventions a diagram is drawn with.
+ *
+ * Not a locale, and the distinction is the whole point: this is chosen from
+ * the characters in the document, never from the language of the screen or a
+ * setting (see the comment on `notationFor`). Keying the table by locale was
+ * proposed and rejected — there is no locale to key it by at the moment it is
+ * needed, and every candidate source would undo that decision.
+ */
+export type NotationStyle = "cjk" | "latin";
 
-export const LATIN_NOTATION: Notation = {
-  language: "en",
-  noteMark: "*",
-  missingHeading: "(no heading)",
-  optionSeparator: ", ",
-  headingSeparator: ": ",
-  fieldSeparator: " | ",
+export const NOTATIONS: Record<NotationStyle, Notation> = {
+  cjk: {
+    language: "ja",
+    noteMark: "※",
+    missingHeading: "(見出し未設定)",
+    optionSeparator: "、",
+    headingSeparator: "：",
+    fieldSeparator: "｜",
+  },
+  latin: {
+    language: "en",
+    noteMark: "*",
+    missingHeading: "(no heading)",
+    optionSeparator: ", ",
+    headingSeparator: ": ",
+    fieldSeparator: " | ",
+  },
 };
 
 /**
@@ -85,5 +97,5 @@ export function notationFor(
     ]),
     ...notes.map((note) => note.text),
   ];
-  return written.some((text) => CJK.test(text ?? "")) ? JAPANESE_NOTATION : LATIN_NOTATION;
+  return written.some((text) => CJK.test(text ?? "")) ? NOTATIONS.cjk : NOTATIONS.latin;
 }

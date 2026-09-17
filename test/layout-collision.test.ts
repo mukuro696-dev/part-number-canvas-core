@@ -4,7 +4,7 @@ import { computeLayout } from "../src/lib/layout/computeLayout";
 import { createEmptyItem } from "../src/lib/document";
 import type { DiagramLayout, PlacedItemLayout } from "../src/lib/layout/computeLayout";
 import type { Point } from "../src/lib/layout/geometry";
-import { JAPANESE_NOTATION } from "../src/lib/notation";
+import { NOTATIONS } from "../src/lib/notation";
 
 function fakeLayout(placed: PlacedItemLayout[], overrides: Partial<DiagramLayout> = {}): DiagramLayout {
   return {
@@ -21,7 +21,7 @@ function fakeLayout(placed: PlacedItemLayout[], overrides: Partial<DiagramLayout
     footnotesRuleEndX: 1540,
     noteNumbers: new Map(),
     shortfalls: [],
-    notation: JAPANESE_NOTATION,
+    notation: NOTATIONS.cjk,
     ...overrides,
   };
 }

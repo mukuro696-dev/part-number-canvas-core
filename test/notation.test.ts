@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JAPANESE_NOTATION, LATIN_NOTATION, notationFor } from "../src/lib/notation";
+import { NOTATIONS, notationFor } from "../src/lib/notation";
 import { computeLayout } from "../src/lib/layout/computeLayout";
 import { buildTextSummary } from "../src/lib/summary";
 import { createEmptyItem } from "../src/lib/document";
@@ -13,28 +13,28 @@ const itemWith = (heading: string, code: string, description: string) => {
 
 describe("notationFor", () => {
   it("reads a document with no Japanese in it as Latin", () => {
-    expect(notationFor("CBL-2M", [itemWith("Length", "2M", "2 m")], [])).toBe(LATIN_NOTATION);
+    expect(notationFor("CBL-2M", [itemWith("Length", "2M", "2 m")], [])).toBe(NOTATIONS.latin);
   });
 
   it("reads one Japanese character anywhere as Japanese", () => {
     expect(notationFor("CBL-2M", [itemWith("Length", "2M", "2 m")], [{ id: "n1", text: "受注生産" }])).toBe(
-      JAPANESE_NOTATION,
+      NOTATIONS.cjk,
     );
-    expect(notationFor("CBL-2M", [itemWith("長さ", "2M", "2 m")], [])).toBe(JAPANESE_NOTATION);
-    expect(notationFor("型番-2M", [itemWith("Length", "2M", "2 m")], [])).toBe(JAPANESE_NOTATION);
+    expect(notationFor("CBL-2M", [itemWith("長さ", "2M", "2 m")], [])).toBe(NOTATIONS.cjk);
+    expect(notationFor("型番-2M", [itemWith("Length", "2M", "2 m")], [])).toBe(NOTATIONS.cjk);
   });
 
   it("treats an empty document as Latin rather than guessing", () => {
-    expect(notationFor("", [], [])).toBe(LATIN_NOTATION);
+    expect(notationFor("", [], [])).toBe(NOTATIONS.latin);
   });
 
   it("is not fooled by ASCII punctuation, digits or units", () => {
-    expect(notationFor("A-1/B", [itemWith("Size (mm)", "1", "10 mm, +/-0.5")], [])).toBe(LATIN_NOTATION);
+    expect(notationFor("A-1/B", [itemWith("Size (mm)", "1", "10 mm, +/-0.5")], [])).toBe(NOTATIONS.latin);
   });
 
   it("sees ideographs from above the BMP, which need the pattern's u flag", () => {
     // U+20B9F, a CJK Extension B ideograph: two UTF-16 code units, one character
-    expect(notationFor("A-1", [itemWith("\u{20b9f}", "1", "10 mm")], [])).toBe(JAPANESE_NOTATION);
+    expect(notationFor("A-1", [itemWith("\u{20b9f}", "1", "10 mm")], [])).toBe(NOTATIONS.cjk);
   });
 });
 

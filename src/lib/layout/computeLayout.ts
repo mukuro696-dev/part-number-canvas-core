@@ -2,7 +2,7 @@ import type { PartNumberItem, PartNumberNote } from "../schema/types";
 import { toGraphemes } from "../graphemes";
 import { itemsWithInlineNotes, noteRefsIn, parseDescription } from "../noteTokens";
 import type { Point, Rect } from "./geometry";
-import { JAPANESE_NOTATION, notationFor, type Notation } from "../notation";
+import { notationFor, type Notation } from "../notation";
 
 export type TextRole = "code" | "heading" | "body";
 /** Width in px of `text` set in the font for `role` at `size`. */
@@ -53,15 +53,6 @@ export const LAYOUT = {
 } as const;
 
 const SEPARATOR = "\u00a0=\u00a0";
-/**
- * Drawn before every note number, in the text and in the footnote list.
- * A bare superscript digit after a unit reads as a power: "240 V¹".
- *
- * The Japanese default, kept as a named export because it is the mark every
- * document written before this was drawn with. Which mark a given diagram
- * actually gets comes from `notationFor()` and rides on the layout.
- */
-export const NOTE_MARK = JAPANESE_NOTATION.noteMark;
 const BREAK_AFTER = "・／/、，,";
 /** never at the start of a line (行頭禁則) */
 const NO_LINE_START = "、。，．,.）)］]｝}」』】〕〉》・：；:;！!？?ー々ゝゞぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ％%";

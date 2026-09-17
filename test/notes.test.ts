@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JAPANESE_NOTATION } from "../src/lib/notation";
+import { NOTATIONS } from "../src/lib/notation";
 import { checkNoteReferences, createEmptyItem } from "../src/lib/document";
 import { LAYOUT, approxMeasure, computeLayout, wrapDescription } from "../src/lib/layout/computeLayout";
 import { checkWarnings } from "../src/lib/warnings";
@@ -130,12 +130,12 @@ describe("wrapDescription: units and markers", () => {
   const refs = (...ids: string[]) => ids.map(noteToken).join("");
 
   it("breaks before a unit like \"12 - 24 V\" instead of inside it when there is no space to break at", () => {
-    const lines = wrapDescription("電圧12 - 24 V", numbers, 140, 0, approxMeasure, JAPANESE_NOTATION.noteMark);
+    const lines = wrapDescription("電圧12 - 24 V", numbers, 140, 0, approxMeasure, NOTATIONS.cjk.noteMark);
     expect(show(lines)).toEqual(["電圧", "12\u00a0-\u00a024\u00a0V"]);
   });
 
   it("takes the previous line's last character along when the marker would overflow that line", () => {
-    const lines = wrapDescription(`あいうえ${refs("a", "b", "c")}`, numbers, 130, 0, approxMeasure, JAPANESE_NOTATION.noteMark);
+    const lines = wrapDescription(`あいうえ${refs("a", "b", "c")}`, numbers, 130, 0, approxMeasure, NOTATIONS.cjk.noteMark);
     expect(show(lines)).toEqual(["あいう", "え^※1※2※3"]);
     for (const line of lines) {
       const width = line.reduce(
@@ -147,18 +147,18 @@ describe("wrapDescription: units and markers", () => {
   });
 
   it("still joins the marker onto the previous line when it fits", () => {
-    expect(show(wrapDescription(`あいうえ${refs("a")}`, numbers, 160, 0, approxMeasure, JAPANESE_NOTATION.noteMark))).toEqual(["あいうえ^※1"]);
+    expect(show(wrapDescription(`あいうえ${refs("a")}`, numbers, 160, 0, approxMeasure, NOTATIONS.cjk.noteMark))).toEqual(["あいうえ^※1"]);
   });
 
   it("never starts a line with a marker placed in the middle of the text", () => {
     // "あいう" fills the line; the marker must go down together with "う"
-    const lines = show(wrapDescription(`あいう${refs("a")}えお`, numbers, 100, 0, approxMeasure, JAPANESE_NOTATION.noteMark));
+    const lines = show(wrapDescription(`あいう${refs("a")}えお`, numbers, 100, 0, approxMeasure, NOTATIONS.cjk.noteMark));
     expect(lines.every((line) => !line.startsWith("^"))).toBe(true);
     expect(lines.join("")).toBe("あいう^※1えお");
   });
 
   it("keeps a unit together when a reference follows it", () => {
-    const lines = show(wrapDescription(`電圧12 V${refs("a")}`, numbers, 110, 0, approxMeasure, JAPANESE_NOTATION.noteMark));
+    const lines = show(wrapDescription(`電圧12 V${refs("a")}`, numbers, 110, 0, approxMeasure, NOTATIONS.cjk.noteMark));
     expect(lines.at(-1)).toBe("12\u00a0V^※1");
   });
 });
@@ -204,29 +204,29 @@ describe("wrapDescription: cases found in the post-implementation review", () =>
     line.reduce((w, r) => w + charWidth(r.text, "body", r.sup ? LAYOUT.optionSize * LAYOUT.supScale : LAYOUT.optionSize), 0);
 
   it("re-checks what a break carries over against the next line's indented limit", () => {
-    const lines = wrapDescription("あ いうえおかきくけこ", numbers, 100, 40, charWidth, JAPANESE_NOTATION.noteMark);
+    const lines = wrapDescription("あ いうえおかきくけこ", numbers, 100, 40, charWidth, NOTATIONS.cjk.noteMark);
     lines.forEach((line, i) => expect(width(line)).toBeLessThanOrEqual(i === 0 ? 100 : 60));
   });
 
   it("binds a marker at the very start to what follows, so it never sits alone", () => {
-    const lines = show(wrapDescription(`${noteToken("n")}あいう`, numbers, 20, 0, charWidth, JAPANESE_NOTATION.noteMark));
+    const lines = show(wrapDescription(`${noteToken("n")}あいう`, numbers, 20, 0, charWidth, NOTATIONS.cjk.noteMark));
     expect(lines[0]).not.toBe("^※1");
   });
 
   it("binds a marker after a space to the word before the space", () => {
-    const lines = show(wrapDescription(`ABC ${noteToken("n")}`, numbers, 40, 0, charWidth, JAPANESE_NOTATION.noteMark));
+    const lines = show(wrapDescription(`ABC ${noteToken("n")}`, numbers, 40, 0, charWidth, NOTATIONS.cjk.noteMark));
     expect(lines.every((line) => !line.trim().startsWith("^"))).toBe(true);
   });
 
   it("does not split a Latin word or number such as 24V by characters when it fits a line", () => {
-    const lines = show(wrapDescription("電圧は24VDC", numbers, 70, 0, charWidth, JAPANESE_NOTATION.noteMark));
+    const lines = show(wrapDescription("電圧は24VDC", numbers, 70, 0, charWidth, NOTATIONS.cjk.noteMark));
     expect(lines).toContain("24VDC");
   });
 
   it("keeps closing brackets and punctuation off the start of a line, and opening brackets off the end (禁則)", () => {
-    const closing = show(wrapDescription("あいう）", numbers, 30, 0, charWidth, JAPANESE_NOTATION.noteMark));
+    const closing = show(wrapDescription("あいう）", numbers, 30, 0, charWidth, NOTATIONS.cjk.noteMark));
     expect(closing.every((line) => !line.startsWith("）"))).toBe(true);
-    const opening = show(wrapDescription("あい（う", numbers, 30, 0, charWidth, JAPANESE_NOTATION.noteMark));
+    const opening = show(wrapDescription("あい（う", numbers, 30, 0, charWidth, NOTATIONS.cjk.noteMark));
     expect(opening.every((line) => !line.endsWith("（"))).toBe(true);
   });
 });
