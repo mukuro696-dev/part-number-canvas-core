@@ -18,6 +18,11 @@ export interface DiagramSvgProps {
    * around it. Without it the link simply goes unnamed.
    */
   describeSelectItem?: (heading: string) => string;
+  /**
+   * The diagram's own name for a screen reader, in the page's language. Same
+   * reason as above; without it an English default stands in.
+   */
+  label?: string;
   /** CSS font-family value for the part-number row */
   codeFontFamily?: string;
   /** CSS font-family value for headings/descriptions */
@@ -37,6 +42,7 @@ export function DiagramSvg({
   rangeTints = [],
   onSelectItem,
   describeSelectItem,
+  label,
   codeFontFamily = DEFAULT_CODE_FONT_FAMILY,
   bodyFontFamily = DEFAULT_BODY_FONT_FAMILY,
 }: DiagramSvgProps) {
@@ -49,7 +55,7 @@ export function DiagramSvg({
       viewBox={`0 0 ${svgWidth} ${height}`}
       width="100%"
       role="img"
-      aria-label={`Part number diagram for ${xml(code)}`}
+      aria-label={xml(label ?? `Part number diagram for ${code}`)}
       className={`diagram-svg ${background === "white" ? "diagram-bg-white" : "diagram-bg-transparent"}`}
       fill="#000000"
       // positions are measured with every space kept, so the drawing must not collapse runs of spaces.
