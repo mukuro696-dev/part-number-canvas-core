@@ -13,10 +13,13 @@
 |---|---|---|---|
 | ゴシック | 欧文 | Noto Sans | `@fontsource/noto-sans` |
 | ゴシック | 日本語 | Noto Sans JP | `@fontsource/noto-sans-jp` |
+| ゴシック | 日本語（記号・[113]スライス） | Noto Sans JP | `@fontsource/noto-sans-jp` |
 | 明朝 | 欧文 | Noto Serif | `@fontsource/noto-serif` |
 | 明朝 | 日本語 | Noto Serif JP | `@fontsource/noto-serif-jp` |
+| 明朝 | 日本語（記号・[113]スライス） | Noto Serif JP | `@fontsource/noto-serif-jp` |
 | デザイン | 欧文 | BIZ UDPGothic | `@fontsource/biz-udpgothic` |
 | デザイン | 日本語 | BIZ UDPGothic | `@fontsource/biz-udpgothic` |
+| デザイン | 日本語（記号・[113]スライス） | BIZ UDPGothic | `@fontsource/biz-udpgothic` |
 | 型番行(ゴシック) | 欧文 | Roboto Condensed | `@fontsource/roboto-condensed` |
 | 型番行(コンデンス) | 欧文 | Barlow Condensed | `@fontsource/barlow-condensed` |
 | 型番行(プレックス) | 欧文 | IBM Plex Sans Condensed | `@fontsource/ibm-plex-sans-condensed` |
@@ -27,6 +30,11 @@
 npm install  # devDependencies の @fontsource/* を取得
 node scripts/prepare-font-sources.mjs
 ```
+
+
+★ `*-japanese-113-400` は Google Fonts のスライス [113]。`※`（U+203B）は「japanese」スライスに**無く**、
+このスライスにだけある。ツール自身が注記の印として描く文字なので、無いと書き出しの `※` が
+受け手の環境の代替書体になる（無ければ豆腐）。2026-09-17 に書き出しの埋め込み検査が発見。
 
 ## sha256（source/*.woff2、取得直後）
 
@@ -40,6 +48,9 @@ node scripts/prepare-font-sources.mjs
 543c03fff71d1b39590af102e0852c2dbce46f4dbe4faaebafbef6edc82e78f5  roboto-condensed-latin-400.woff2
 7fff1bb22e5773f0d1a55d3093068b6dac4539e8bb3ac23fb9f0a729df2c7bb4  barlow-condensed-latin-400.woff2
 456bf5cda9c0b1f1ead43f01b80df5ba5af7cb41d7cbc0543091537c39fb4c89  ibm-plex-sans-condensed-latin-400.woff2
+5b7ccd4a6fd4318841b21279c6ed9b520465ad75de39b2aa24c766cddb8ca46b  biz-udpgothic-japanese-113-400.woff2
+329c7390208a6522086fad7f375dd7548f03ead69398bcb79dfbc5b673406899  noto-sans-jp-japanese-113-400.woff2
+1192010576d12dd78979d0c9b281b684723a877519268af017e060d1bc5dc60a  noto-serif-jp-japanese-113-400.woff2
 ```
 
 ## ライセンス

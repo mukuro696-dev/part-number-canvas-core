@@ -14,10 +14,13 @@ const SOURCE_DIR = path.join(import.meta.dirname, "..", "assets", "fonts", "sour
 
 const FILES = [
   "biz-udpgothic-japanese-400",
+  "biz-udpgothic-japanese-113-400",
   "biz-udpgothic-latin-400",
   "noto-sans-jp-japanese-400",
+  "noto-sans-jp-japanese-113-400",
   "noto-sans-latin-400",
   "noto-serif-jp-japanese-400",
+  "noto-serif-jp-japanese-113-400",
   "noto-serif-latin-400",
   "roboto-condensed-latin-400",
   "barlow-condensed-latin-400",
