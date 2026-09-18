@@ -23,6 +23,8 @@ export interface Notation {
   language: "ja" | "en";
   /** the reference mark, before the note number */
   noteMark: string;
+  /** the exported diagram's own name for assistive technology, in the document's language */
+  diagramLabel: (code: string) => string;
   /** stands in for a heading the user has not written yet */
   missingHeading: string;
   /** between the options of one item, in the text summary */
@@ -48,6 +50,7 @@ export const NOTATIONS: Record<NotationStyle, Notation> = {
   cjk: {
     language: "ja",
     noteMark: "※",
+    diagramLabel: (code) => `${code} の型番構成図`,
     missingHeading: "(見出し未設定)",
     optionSeparator: "、",
     headingSeparator: "：",
@@ -56,6 +59,7 @@ export const NOTATIONS: Record<NotationStyle, Notation> = {
   latin: {
     language: "en",
     noteMark: "*",
+    diagramLabel: (code) => `Part number diagram for ${code}`,
     missingHeading: "(no heading)",
     optionSeparator: ", ",
     headingSeparator: ": ",
